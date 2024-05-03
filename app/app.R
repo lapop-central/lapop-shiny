@@ -1,10 +1,16 @@
 library(shiny)
 library(lapop)
-library(RStata)
+library(haven)
+library(dplyr)
+
 setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny")
 
+gm2123 <- read_dta("C:/Users/plutowl/Desktop/gm2123.dta")
 
-# Define UI for miles per gallon app ----
+perc_pos <- function(x, min, max){
+  return(mean(between((x), min, max), na.rm = TRUE) * 100)
+}
+
 # Define UI for miles per gallon app ----
 ui <- fluidPage(
   
@@ -22,62 +28,56 @@ ui <- fluidPage(
                   c("Support for Democracy" = "ing4",
                     "Crime Victimization" = "vic1ext")),
       
+      selectInput("pais","Countries",
+                  sort(levels(as_factor(gm2123$pais))[!is.na(gm2123$pais)]), 
+                  multiple = TRUE,
+                  selected = c("Paraguay", "Jamaica")),
+      
+      checkboxGroupInput("year", "Waves",
+                         c("2018/19" = "2018/19",
+                           "2021" = "2021",
+                           "2023" = "2023"),
+                         inline = TRUE), 
+      
       # Input: Checkbox for whether outliers should be included ----
-      checkboxInput("weighted", "Weighted", TRUE)
+      checkboxInput("rescale", "Rescale", TRUE),
+      
+      conditionalPanel("input.rescale",
+                       sliderInput("recode", 
+                                   "Response values included in rescale?",
+                                   min = 0, max = 10, value = c(5, 7))
+                       )
       
     ),
     
     # Main panel for displaying outputs ----
     mainPanel(
-      
+
       # Output: Formatted text for caption ----
       h3(textOutput("caption")),
       
-      # Output: Plot of the requested variable against mpg ----
-      plotOutput("hist"),
-      
-      plotOutput("ts")
-      
-      
+      tabsetPanel(
+        # Panel with plot ----
+        tabPanel("Histogram", plotOutput("hist")),
+        
+        # Panel with plot ----
+        tabPanel("Time Series", plotOutput("ts")),
+        
+        # Panel with plot ----
+        tabPanel("Cross-Country", plotOutput("cc"))
+      )
     )
   )
 )
 
-# Tweak the "am" variable to have nicer factor labels -- since this
-# doesn't rely on any user inputs, we can do this once at startup
-# and then use the value throughout the lifetime of the app
-
-# ym23 <- readstata13::read.dta13("Shiny data/Merge 2023 LAPOP AmericasBarometer (v1.0s).dta")
-# select <- c("pais", "wave", "ing4", "vic1ext", "edre", "q1tc_r", "wealth", "edad", "weight1500")
-# ym23s <- ym23[select]
-# 
-# ym21 <- readstata13::read.dta13("Shiny data/Merged_LAPOP_AmericasBarometer_2021_v1.2.dta")
-# select21 <- c("pais", "wave", "ing4", "vic1ext", "edre", "q1tc_r", "wealth", "edad", "weight1500")
-# ym21s <- ym21[select]
-
-# gm <- readstata13::read.dta13("C:/Users/plutowl/Desktop/Shiny data/gm2123.dta", convert.factors = FALSE)
-# select <- c("pais", "wave", "ing4", "vic1ext", "wealth", "edad")
-# gms <- gm[select]
-
-# gm <- readstata13::read.dta13("C:/Users/plutowl/Box/LAPOP Shared/2_Projects/2023 AB/BHS/Data Processing/BHS merge 2014-2023 LAPOP AmericasBarometer (v1.0s).dta", convert.factors = FALSE)
-
-num_max <- 2
-num <- paste(1:num_max, collapse = " ")
 
 # Define server logic to plot various variables against mpg ----
 server <- function(input, output) {
   
   # Compute the formula text ----
-  # This is in a reactive expression since it is shared by the
-  # output$caption and output$mpgPlot functions
   formulaText <- reactive({
     paste(input$variable)
   })
-  
-  
-
-  
-
   
   outcome <- reactive({
     # if(input$weighted == TRUE){
@@ -87,53 +87,47 @@ server <- function(input, output) {
     # }
   })
   
+  
+  # 
   # Return the formula text for printing as a caption ----
   output$caption <- renderText({
     formulaText()
   })
   
-  # Generate a plot of the requested variable against mpg ----
-  # and only exclude outliers if requested
-  
-
-  
-  # output$hist <- renderPlot({
-  #   # the_wt = ifelse(input$weighted, gms$weight1500, 1)
-  #   # x = outcome() * the_wt
-  #   # var = input$variable
-  #   hist_df <- as.data.frame(prop.table(table(gms[[outcome()]]))*100)
-  #   names(hist_df) <- c("cat", "prop")
-  #   hist_df$proplabel <- paste(round(hist_df$prop), "%", sep = "")
-  #   lapop_hist(hist_df)
-  # })
-  
   output$hist <- renderPlot({
-    stata_cmd2 <- paste('use "C:\\Users\\plutowl\\Box\\LAPOP Shared\\2_Projects\\2023 AB\\BHS\\Data Processing\\BHS merge 2014-2023 LAPOP AmericasBarometer (v1.0s).dta", clear\n', 
-                        "lpr_hist ", outcome(), ', filesave("hist.csv", replace) \n',
-                        'lpr_ts ', outcome(), ' wave, num(', num, ') filesave("ts.csv", replace)')
-    stata(stata_cmd2)
-    hist_df <- read.csv("hist.csv")
+    hist_df <- as.data.frame(prop.table(table(haven::as_factor(zap_missing(gm2123[[outcome()]]))))*100)
+    names(hist_df) <- c("cat", "prop")
+    hist_df$proplabel <- paste(round(hist_df$prop), "%", sep = "")
     lapop_hist(hist_df)
   })
   
+
+  
   output$ts <- renderPlot({
-    ts_df <- read.csv("ts.csv")
-    lapop_ts(ts_df)
+    dta = gm2123 %>%
+      group_by(wave) %>%
+      summarise_at(vars(outcome()), 
+                   list(prop = ~perc_pos(., min = input$recode[1], 
+                                         max = input$recode[2]))) %>%
+      mutate(proplabel = paste0(round(prop), "%"),
+             lb = prop - 2,
+             ub = prop + 2)
+    lapop_ts(dta)
   })
   
   
-  
-  # output$ts <- renderPlot({
-  #   dta = gms %>%
-  #     group_by(wave) %>%
-  #     summarise_at(vars(input$variable), list(name = mean), na.rm = TRUE)
-  #   dta$wave = as.character(dta$wave)
-  #   dta$proplabel = paste(as.character(round(dta$name), 0))
-  #   dta$lb = dta$name - 1
-  #   dta$ub = dta$name + 1
-  #   names(dta)[2] = "prop"
-  #   lapop_ts(dta)
-  # })
+  output$cc <- renderPlot({
+    dta_cc = gm2123 %>% 
+      filter(year == 2023) %>%
+      group_by(vallabel = as_factor(pais)) %>%
+      summarise_at(vars(outcome()), 
+                   list(prop = ~perc_pos(., min = input$recode[1], 
+                                         max = input$recode[2]))) %>%
+      mutate(proplabel = paste0(round(prop), "%"),
+             lb = prop - 2,
+             ub = prop + 2)
+    lapop_cc(dta_cc, sort = "hi-lo")
+  })
   
 }
 
