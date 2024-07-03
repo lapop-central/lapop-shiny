@@ -15,6 +15,9 @@ lapop_fonts_design()
 
 dstrata <- readRDS("C:/Users/plutowl/Desktop/gmrstrata.rds")
 
+labs <- readRDS("C:/Users/plutowl/Desktop/labs.rds")
+
+
 # Define UI for miles per gallon app ----
 ui <- fluidPage(
   
@@ -29,8 +32,8 @@ ui <- fluidPage(
       
       # Input: Selector for variable to plot against mpg ----
       selectInput("variable", "Variable:",
-                  c("Support for Democracy" = "ing4",
-                    "Crime Victimization" = "vic1ext")),
+                  labs[order(names(labs))],
+                  selected = "ing4"),
       
       selectInput("pais","Countries",
                   sort(levels(as_factor(dstrata$variables$pais)[!is.na(dstrata$variables$pais)])), 
@@ -92,28 +95,31 @@ ui <- fluidPage(
       # ),
       
       conditionalPanel(
-        'input.tabs == "Time Series" | input.tabs == "Cross-Country" | input.tabs == "Demographic Breakdown"',
+        'input.tabs == "Time Series" | input.tabs == "Cross-Country" | input.tabs == "Breakdown"',
         uiOutput("sliderUI"),
       ),
       
       
       # uiOutput("mychoices"),
-      
+      # c("None" = "None",
+      #   "Crime Victimization" = "vic1ext",
+      #   "Support for Democracy" = "ing4")
       conditionalPanel(
-        'input.tabs == "Additional Breakdown"',
-        sliderInput("recode",
-                    "Response values included in positive category?",
-                    min = 0, max = 7, value = c(5, 7)),
-        selectInput("variable_sec", "Secondary Variable:",
-                    c("Crime Victimization" = "vic1ext",
-                      "Support for Democracy" = "ing4")),
+        'input.tabs == "Breakdown"',
+        # uiOutput("sliderUI"),
+        selectizeInput("variable_sec", "Secondary Variable:",
+                    c("None" = "None",
+                      labs[order(names(labs))])),
+        checkboxGroupInput("demog", "Demographic Variables:",
+                           c("Gender" = "gendermc",
+                             "Age" = "edad",
+                             "Wealth" = "wealth",
+                             "Education" = "edre",
+                             "Urban/Rural" = "ur"),
+                           selected = c("gendermc", "edad", "edre"),
+                           inline = TRUE)
       ),
-      
-      
-      # sliderInput("recode",
-      #             "Response values included in positive category?",
-      #             min = 0, max = 7, value = c(5, 7)),
-      
+    
       actionButton("go", "Refresh")
       
     ),
@@ -132,11 +138,7 @@ ui <- fluidPage(
         
         tabPanel("Cross-Country", plotOutput("cc")),
         
-        tabPanel("Demographic Breakdown", plotOutput("mover")),
-        
-        tabPanel("Additional Breakdown")
-        
-        # tabPanel("Additional Breakdown", plotOutput("mover")),
+        tabPanel("Breakdown", plotOutput("mover"))
         )
     )
   )
@@ -155,16 +157,6 @@ server <- function(input, output, session) {
       input$variable
   })
   
-  
-    # observeEvent(input$variable,  {
-    #   updateSliderInput(session = session, inputId = "recode",
-    #                     min = min(as.numeric(dstrata[['variables']][[formulaText()]]), na.rm=TRUE),
-    #                     max = max(as.numeric(dstrata[['variables']][[formulaText()]]), na.rm=TRUE),
-    #                     # round = TRUE,
-    #                     step = 1,
-    #                     value = c(1, 1))
-    # })
-  
   sliderParams <- reactiveValues(valuex = c(1, 2))
 
   observeEvent(input$variable, {
@@ -172,6 +164,8 @@ server <- function(input, output, session) {
       sliderParams$valuex <- c(5, 7)
     } else if (max(as.numeric(dstrata[['variables']][[formulaText()]]), na.rm=TRUE) == 2) {
       sliderParams$valuex <- c(1, 1)
+    } else if (max(as.numeric(dstrata[['variables']][[formulaText()]]), na.rm=TRUE) == 4) {
+      sliderParams$valuex <- c(1, 2)
     }
   })
   
@@ -184,15 +178,6 @@ server <- function(input, output, session) {
                 step = 1)
   })
   
-  # observeEvent(input$variable, {
-  #   sliderParams$value <- input$slider
-  # })
-  
-
-
-  
-  
-
   
   dff <- eventReactive(input$go, ignoreNULL = FALSE, {
     dstrata %>%
@@ -200,8 +185,6 @@ server <- function(input, output, session) {
       filter(pais_nam %in% input$pais)
   })
   
-  
-  # 
   # Return the formula text for printing as a caption ----
   output$caption <- renderText({
     paste("Short question label goes here")
@@ -212,8 +195,7 @@ server <- function(input, output, session) {
   })
   
 
-
-  
+#hist 
   output$hist <- renderPlot({
     hist_df <- dff() %>%
       group_by(across(outcome())) %>%
@@ -226,13 +208,14 @@ server <- function(input, output, session) {
     
      lapop_hist(hist_df, source_info = "LAPOP Lab, AmericasBarometer")
     })
-    
+
+  #ts
   tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_ts = dff() %>%
       group_by(as.character(as_factor(wave))) %>%
       summarise_at(vars(outcome()),
-                   list(prop = ~survey_mean(between(., input$recode[1],
-                                                    input$recode[2]),
+                   list(prop = ~survey_mean(between(., sliderParams$valuex[1],
+                                                    sliderParams$valuex[2]),
                                             na.rm = TRUE,
                                             vartype = "ci") * 100)) %>%
       mutate(proplabel = paste0(round(prop), "%")) %>%
@@ -248,13 +231,13 @@ server <- function(input, output, session) {
     tsd()
   })
 
-
+#cc 
   ccd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_cc = dff() %>%
       group_by(vallabel = pais_lab) %>%
       summarise_at(vars(outcome()),
-                   list(prop = ~survey_mean(between(., input$recode[1], 
-                                                    input$recode[2]), 
+                   list(prop = ~survey_mean(between(., sliderParams$valuex[1],
+                                                    sliderParams$valuex[2]), 
                                             na.rm = TRUE, 
                                             vartype = "ci") * 100)) %>%
       mutate(proplabel = paste0(round(prop), "%")) %>%
@@ -269,101 +252,139 @@ server <- function(input, output, session) {
     ccd()
   })
   
+  #mover plot
+  secdf <- eventReactive(input$go, ignoreNULL = FALSE, {
+    if(input$variable_sec == "None") {
+      dta_mover_sec = NULL
+    } else {
+      dta_mover_sec = dff() %>%
+        group_by(vallabel = haven::as_factor(zap_missing(vic1ext))) %>%
+        summarise_at(vars(outcome()),
+                     list(prop = ~survey_mean(between(., sliderParams$valuex[1],
+                                                      sliderParams$valuex[2]), 
+                                              na.rm = TRUE, 
+                                              vartype = "ci") * 100)) %>%
+        mutate(varlabel = "Secondary variable",
+               proplabel = paste0(round(prop), "%")) %>%
+        rename(.,  lb = prop_low, ub = prop_upp) %>%
+        drop_na(.)
+    }
+    return(dta_mover_sec)
+  })
   
-  # output$cc <- renderPlot({
-  # 
-  #   dta_cc = dff() %>%
-  #     group_by(vallabel = pais_lab) %>%
-  #     summarise_at(vars(outcome()),
-  #                  list(prop = ~survey_mean(between(., input$recode[1], 
-  #                                                   input$recode[2]), 
-  #                                           na.rm = TRUE, 
-  #                                           vartype = "ci") * 100)) %>%
-  #     mutate(proplabel = paste0(round(prop), "%")) %>%
-  #     rename(.,  lb = prop_low, ub = prop_upp)
-  # 
-  #   lapop_cc(dta_cc, sort = "hi-lo", subtitle = "% in positive category",
-  #            source_info = "LAPOP Lab, AmericasBarometer")
-  # })
   
-  moverd <- eventReactive(input$go, ignoreNULL = FALSE, {
+  genderdf <- eventReactive(input$go, ignoreNULL = FALSE, {
+    if("gendermc" %in% input$demog) {
+      dta_mover_ge = dff() %>%
+        group_by(vallabel = haven::as_factor(zap_missing(gendermc))) %>%
+        summarise_at(vars(outcome()),
+                     list(prop = ~survey_mean(between(., sliderParams$valuex[1],
+                                                      sliderParams$valuex[2]), 
+                                              na.rm = TRUE, 
+                                              vartype = "ci") * 100)) %>%
+        mutate(varlabel = "Gender",
+               proplabel = paste0(round(prop), "%")) %>%
+        rename(.,  lb = prop_low, ub = prop_upp) %>%
+        drop_na(.)
+    }
+    else {
+      dta_mover_ge = NULL
+    }
+      return(dta_mover_ge)
+    })
+  
+  wealthdf <- eventReactive(input$go, ignoreNULL = FALSE, {
+    if("wealth" %in% input$demog) {
+    dta_mover_w = dff() %>%
+      group_by(vallabel = zap_missing(wealthf)) %>%
+      summarise_at(vars(outcome()),
+                   list(prop = ~survey_mean(between(., sliderParams$valuex[1],
+                                                    sliderParams$valuex[2]),
+                                            na.rm = TRUE,
+                                            vartype = "ci") * 100)) %>%
+      mutate(varlabel = "Wealth",
+             proplabel = paste0(round(prop), "%")) %>%
+      rename(.,  lb = prop_low, ub = prop_upp) %>%
+      drop_na(.)
+    }
+    else {
+      dta_mover_w = NULL
+    }
+    return(dta_mover_w)
+  })
+  
+  
+  eddf <- eventReactive(input$go, ignoreNULL = FALSE, {
+    if("edre" %in% input$demog) {
+    dta_mover_ed = dff() %>%
+      group_by(vallabel = zap_missing(edrer)) %>%
+      summarise_at(vars(outcome()),
+                   list(prop = ~survey_mean(between(., sliderParams$valuex[1],
+                                                    sliderParams$valuex[2]),
+                                            na.rm = TRUE,
+                                            vartype = "ci") * 100)) %>%
+      mutate(varlabel = "Education",
+             proplabel = paste0(round(prop), "%")) %>%
+      rename(.,  lb = prop_low, ub = prop_upp) %>%
+      drop_na(.)
+    }
+    else {
+      dta_mover_ed = NULL
+    }
+    return(dta_mover_ed)
     
-  dta_mover_ge = dff() %>%
-    # filter(as_factor(wave) %in% input$wave) %>%
-    # filter(pais_nam %in% input$pais) %>%
-    group_by(vallabel = haven::as_factor(zap_missing(gendermc))) %>%
-    summarise_at(vars(outcome()),
-                 list(prop = ~survey_mean(between(., input$recode[1], 
-                                                  input$recode[2]), 
-                                          na.rm = TRUE, 
-                                          vartype = "ci") * 100)) %>%
-    mutate(varlabel = "Gender",
-           proplabel = paste0(round(prop), "%")) %>%
-    rename(.,  lb = prop_low, ub = prop_upp) %>%
-    drop_na(.)
+  })
 
-  dta_mover_w = dff() %>%
-    # filter(as_factor(wave) %in% input$wave) %>%
-    # filter(pais_nam %in% input$pais) %>%
-    group_by(vallabel = zap_missing(wealthf)) %>%
-    summarise_at(vars(outcome()),
-                 list(prop = ~survey_mean(between(., input$recode[1],
-                                                  input$recode[2]),
-                                          na.rm = TRUE,
-                                          vartype = "ci") * 100)) %>%
-    mutate(varlabel = "Wealth",
-           proplabel = paste0(round(prop), "%")) %>%
-    rename(.,  lb = prop_low, ub = prop_upp) %>%
-    drop_na(.)
-
-  dta_mover_ed = dff() %>%
-    # filter(as_factor(wave) %in% input$wave) %>%
-    # filter(pais_nam %in% input$pais) %>%
-    group_by(vallabel = zap_missing(edrer)) %>%
-    summarise_at(vars(outcome()),
-                 list(prop = ~survey_mean(between(., input$recode[1],
-                                                  input$recode[2]),
-                                          na.rm = TRUE,
-                                          vartype = "ci") * 100)) %>%
-    mutate(varlabel = "Education",
-           proplabel = paste0(round(prop), "%")) %>%
-    rename(.,  lb = prop_low, ub = prop_upp) %>%
-    drop_na(.)
-
-  dta_mover_ag = dff() %>%
-    # filter(as_factor(wave) %in% input$wave) %>%
-    # filter(pais_nam %in% input$pais) %>%
-    group_by(vallabel = haven::as_factor(zap_missing(edad))) %>%
-    summarise_at(vars(outcome()),
-                 list(prop = ~survey_mean(between(., input$recode[1],
-                                                  input$recode[2]),
-                                          na.rm = TRUE,
-                                          vartype = "ci") * 100)) %>%
-    mutate(varlabel = "Age",
-           proplabel = paste0(round(prop), "%")) %>%
-    rename(.,  lb = prop_low, ub = prop_upp) %>%
-    drop_na(.)
-
-  dta_mover_ur = dff() %>%
-    # filter(as_factor(wave) %in% input$wave) %>%
-    # filter(pais_nam %in% input$pais) %>%
-    group_by(vallabel = haven::as_factor(zap_missing(ur))) %>%
-    summarise_at(vars(outcome()),
-                 list(prop = ~survey_mean(between(., input$recode[1],
-                                                  input$recode[2]),
-                                          na.rm = TRUE,
-                                          vartype = "ci") * 100)) %>%
-    mutate(varlabel = "Place of\nResidence",
-           proplabel = paste0(round(prop), "%")) %>%
-    rename(.,  lb = prop_low, ub = prop_upp) %>%
-    drop_na(.)
-
-  dta_mover <- rbind(dta_mover_ge, dta_mover_ag, dta_mover_w, dta_mover_ed, dta_mover_ur)
-  dta_mover$vallabel <- as.character(dta_mover$vallabel)
+  edaddf <- eventReactive(input$go, ignoreNULL = FALSE, {
+    if("edad" %in% input$demog) {
+    dta_mover_ag = dff() %>%
+      group_by(vallabel = haven::as_factor(zap_missing(edad))) %>%
+      summarise_at(vars(outcome()),
+                   list(prop = ~survey_mean(between(., sliderParams$valuex[1],
+                                                    sliderParams$valuex[2]),
+                                            na.rm = TRUE,
+                                            vartype = "ci") * 100)) %>%
+      mutate(varlabel = "Age",
+             proplabel = paste0(round(prop), "%")) %>%
+      rename(.,  lb = prop_low, ub = prop_upp) %>%
+      drop_na(.)     
+    }
+    else {
+      dta_mover_ag = NULL
+    }
+    return(dta_mover_ag)
+  })
   
-  moverg <- lapop_mover(dta_mover, subtitle = "% in positive category",
+  urdf <- eventReactive(input$go, ignoreNULL = FALSE, {
+    if("ur" %in% input$demog) {
+      dta_mover_ur = dff() %>%
+      group_by(vallabel = haven::as_factor(zap_missing(ur))) %>%
+      summarise_at(vars(outcome()),
+                   list(prop = ~survey_mean(between(., sliderParams$valuex[1],
+                                                    sliderParams$valuex[2]),
+                                            na.rm = TRUE,
+                                            vartype = "ci") * 100)) %>%
+      mutate(varlabel = "Place of\nResidence",
+             proplabel = paste0(round(prop), "%")) %>%
+      rename(.,  lb = prop_low, ub = prop_upp) %>%
+      drop_na(.)
+    }
+    else {
+      dta_mover_ur = NULL
+    }
+    return(dta_mover_ur)
+  })
+  
+  
+  
+  
+  moverd <- eventReactive(input$go, ignoreNULL = FALSE, { 
+    dta_mover <- rbind(secdf(), genderdf(), edaddf(), wealthdf(), eddf(), urdf())
+    dta_mover$vallabel <- as.character(dta_mover$vallabel)
+    
+    moverg <- lapop_mover(dta_mover, subtitle = "% in positive category",
               source_info = "LAPOP Lab, AmericasBarometer")
-  return(moverg)
+    return(moverg)
   })
   
   
