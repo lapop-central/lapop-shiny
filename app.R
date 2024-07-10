@@ -14,10 +14,9 @@ lapop_fonts_design()
 # dstrata <- gm %>%
 #   as_survey(strata = strata, weights = weight1500)
 
-dstrata <- readRDS("C:/Users/plutowl/Desktop/gmrstrata.rds")
-
-labs <- readRDS("C:/Users/plutowl/Desktop/labs.rds")
-vars_labels <- read.csv("C:/Users/plutowl/Desktop/new variables for data playground_mr_lap.csv", encoding = "latin1")
+dstrata <- readRDS("data/gmrstrata.rds")
+labs <- readRDS("data/labs.rds")
+vars_labels <- read.csv("data/new variables for data playground_mr_lap.csv", encoding = "latin1")
 
 
 # Define UI for miles per gallon app ----
