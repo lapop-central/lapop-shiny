@@ -3,6 +3,7 @@ library(lapop)
 library(haven)
 library(srvyr)
 library(dplyr)
+library(ggplot2)
 library(lazyeval)
 lapop_fonts_design()
 
@@ -16,6 +17,7 @@ lapop_fonts_design()
 dstrata <- readRDS("C:/Users/plutowl/Desktop/gmrstrata.rds")
 
 labs <- readRDS("C:/Users/plutowl/Desktop/labs.rds")
+vars_labels <- read.csv("C:/Users/plutowl/Desktop/new variables for data playground_mr_lap.csv", encoding = "latin1")
 
 
 # Define UI for miles per gallon app ----
@@ -29,6 +31,7 @@ ui <- fluidPage(
     
     # Sidebar panel for inputs ----
     sidebarPanel(
+                       
       
       # Input: Selector for variable to plot against mpg ----
       selectInput("variable", "Variable:",
@@ -107,7 +110,7 @@ ui <- fluidPage(
       conditionalPanel(
         'input.tabs == "Breakdown"',
         # uiOutput("sliderUI"),
-        selectizeInput("variable_sec", "Secondary Variable:",
+        selectInput("variable_sec", "Secondary Variable:",
                     c("None" = "None",
                       labs[order(names(labs))])),
         checkboxGroupInput("demog", "Demographic Variables:",
@@ -120,7 +123,9 @@ ui <- fluidPage(
                            inline = TRUE)
       ),
     
-      actionButton("go", "Refresh")
+      actionButton("go", "Generate"),
+      
+      actionButton("reset_input", "Reset inputs")
       
     ),
     
@@ -139,10 +144,15 @@ ui <- fluidPage(
         tabPanel("Cross-Country", plotOutput("cc")),
         
         tabPanel("Breakdown", plotOutput("mover"))
-        )
+        ),
+      br(),
+      fluidRow(column(12, "",
+                      downloadButton(outputId = "downloadPlot", label = "Download Figure")))
     )
   )
 )
+
+
 
 
 # Define server logic to plot various variables against mpg ----
@@ -157,7 +167,11 @@ server <- function(input, output, session) {
       input$variable
   })
   
-  sliderParams <- reactiveValues(valuex = c(1, 2))
+  variable_sec <- reactive({
+    input$variable_sec
+  })
+  
+  sliderParams <- reactiveValues(valuex = c(1, 1))
 
   observeEvent(input$variable, {
     if (max(as.numeric(dstrata[['variables']][[formulaText()]]), na.rm=TRUE) == 7) {
@@ -166,6 +180,10 @@ server <- function(input, output, session) {
       sliderParams$valuex <- c(1, 1)
     } else if (max(as.numeric(dstrata[['variables']][[formulaText()]]), na.rm=TRUE) == 4) {
       sliderParams$valuex <- c(1, 2)
+    } else if (max(as.numeric(dstrata[['variables']][[formulaText()]]), na.rm=TRUE) == 5) {
+      sliderParams$valuex <- c(1, 2)
+    } else if (max(as.numeric(dstrata[['variables']][[formulaText()]]), na.rm=TRUE) == 10) {
+      sliderParams$valuex <- c(7, 10)
     }
   })
   
@@ -179,6 +197,19 @@ server <- function(input, output, session) {
   })
   
   
+  # observeEvent(input$reset_input, {
+  #   shinyjs::reset("side-panel")
+  # })
+  
+  observeEvent(input$reset_input, {
+    updateSelectInput(session, "pais", selected = NA)
+    updateSelectInput(session, "wave", selected = NA)
+    updateSelectInput(session, "recode", selected = c(1, 1))
+    
+        
+        # updateNumericInput(session, "y","Y", NA)
+  })
+  
   dff <- eventReactive(input$go, ignoreNULL = FALSE, {
     dstrata %>%
       filter(as_factor(wave) %in% input$wave) %>%
@@ -186,17 +217,25 @@ server <- function(input, output, session) {
   })
   
   # Return the formula text for printing as a caption ----
-  output$caption <- renderText({
-    paste("Short question label goes here")
+  cap <- renderText({
+    vars_labels$question_short_en[which(vars_labels$column_name == formulaText())]
   })
   
-  output$wording <- renderText({
-    paste("Full question wording goes here")
+  output$caption <- eventReactive(input$go, ignoreNULL = FALSE, {
+    cap() 
   })
   
+  word <- renderText({
+    vars_labels$question_en[which(vars_labels$column_name == formulaText())]
+  })
+  
+  output$wording <- eventReactive(input$go, ignoreNULL = FALSE, {
+    word() 
+  })
 
+    
 #hist 
-  output$hist <- renderPlot({
+  histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     hist_df <- dff() %>%
       group_by(across(outcome())) %>%
       summarise(n = unweighted(n()))  %>%
@@ -205,10 +244,14 @@ server <- function(input, output, session) {
       mutate(prop = prop.table(n) * 100,
              proplabel = paste(round(prop), "%", sep = ""),
              cat = as.character(haven::as_factor(cat)))  
-    
-     lapop_hist(hist_df, source_info = "LAPOP Lab, AmericasBarometer")
+     histg <- lapop_hist(hist_df, source_info = "LAPOP Lab, AmericasBarometer")
+     return(histg)
     })
 
+  output$hist <- renderPlot({
+    histd()
+  })
+  
   #ts
   tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_ts = dff() %>%
@@ -219,13 +262,31 @@ server <- function(input, output, session) {
                                             na.rm = TRUE,
                                             vartype = "ci") * 100)) %>%
       mutate(proplabel = paste0(round(prop), "%")) %>%
-      rename(.,  wave = 1, lb = prop_low, ub = prop_upp)
+      rename(.,  wave = 1, lb = prop_low, ub = prop_upp) %>%
+      filter(prop > 0)
     tsg <- lapop_ts(dta_ts, source_info = "LAPOP Lab, AmericasBarometer",
              subtitle = "% in positive category")
     return(tsg)
   })
 
-
+  output$downloadPlot <- downloadHandler(
+    filename = function(file) {
+      ifelse(input$tabs == "Histogram", "hist.svg", 
+             ifelse(input$tabs == "Time Series", "ts.svg", 
+             ifelse(input$tabs == "Cross-Country", "cc.svg", "mover.svg")))
+    },
+    content = function(file) {
+      if(input$tabs == "Histogram") {
+        lapop_save(histd(), file)
+      } else if (input$tabs == "Time Series") {
+        lapop_save(tsd(), file)
+      } else if (input$tabs == "Cross Country") {
+        lapop_save(ccd(), file)
+      } else {
+        lapop_save(moverd(), file)
+      }
+    }
+  )
 
   output$ts <- renderPlot({
     tsd()
@@ -258,15 +319,15 @@ server <- function(input, output, session) {
       dta_mover_sec = NULL
     } else {
       dta_mover_sec = dff() %>%
-        group_by(vallabel = haven::as_factor(zap_missing(vic1ext))) %>%
+        group_by_at(input$variable_sec) %>%
         summarise_at(vars(outcome()),
-                     list(prop = ~survey_mean(between(., sliderParams$valuex[1],
-                                                      sliderParams$valuex[2]), 
+                     list(prop = ~survey_mean(between(., 5, 7), 
                                               na.rm = TRUE, 
                                               vartype = "ci") * 100)) %>%
-        mutate(varlabel = "Secondary variable",
+        rename(.,  vallabel = 1, lb = prop_low, ub = prop_upp) %>%
+        mutate(vallabel = as.character(as_factor(zap_missing(vallabel))),
+               varlabel = "Secondary variable",
                proplabel = paste0(round(prop), "%")) %>%
-        rename(.,  lb = prop_low, ub = prop_upp) %>%
         drop_na(.)
     }
     return(dta_mover_sec)
@@ -317,7 +378,7 @@ server <- function(input, output, session) {
   eddf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if("edre" %in% input$demog) {
     dta_mover_ed = dff() %>%
-      group_by(vallabel = zap_missing(edrer)) %>%
+      group_by(vallabel = zap_missing(edrerf)) %>%
       summarise_at(vars(outcome()),
                    list(prop = ~survey_mean(between(., sliderParams$valuex[1],
                                                     sliderParams$valuex[2]),
