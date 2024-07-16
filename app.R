@@ -304,7 +304,7 @@ server <- function(input, output, session) {
       rename(cat = 1) %>%
       mutate(prop = prop.table(n) * 100,
              proplabel = paste(round(prop), "%", sep = ""),
-             cat = str_wrap(as.character(haven::as_factor(cat)), width = 17))  
+             cat = str_wrap(as.character(haven::as_factor(cat)), width = 25))  
     return(hist_df)
     })
 
@@ -396,7 +396,7 @@ server <- function(input, output, session) {
                                               na.rm = TRUE, 
                                               vartype = "ci") * 100)) %>%
         rename(.,  vallabel = 1, lb = prop_low, ub = prop_upp) %>%
-        mutate(vallabel = str_wrap(as.character(as_factor(zap_missing(vallabel))), width = 17),
+        mutate(vallabel = str_wrap(as.character(as_factor(zap_missing(vallabel))), width = 25),
                varlabel = str_wrap(variable_sec_lab(), width = 25),
                proplabel = paste0(round(prop), "%")) %>%
         drop_na(.)
