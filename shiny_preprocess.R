@@ -4,7 +4,7 @@ library(haven)
 # library(sjlabelled)
 
 # gm <- read_dta("C:/Users/plutowl/Box/LAPOP Shared/2_Projects/2023 AB/Core_Regional/Data Processing/GM/Grand Merge 2004-2023 LAPOP AmericasBarometer (v1.0s).dta")
-gm <- haven::read_dta("C:/Users/plutowl/Desktop/gm1.dta")
+gm <- haven::read_dta("C:/Users/plutowl/Desktop/gm2.dta")
 pais_lab <- read.csv("C:/Users/plutowl/Desktop/pais_lab.csv")
 gm <- merge(gm, pais_lab, by.x = "pais", by.y = "pais_num")
 
@@ -155,6 +155,10 @@ vars_labels$display_en <- paste0(vars_labels$category_short_en, ": ", vars_label
 vars2 <- vars_labels$column_name
 vars3 <- c(vars2, vars)
 
+
+vars3 %in% names(gm)
+vars3[!vars3 %in% names(gm)]
+
 gmr <- gm[vars3]
 
 library(srvyr)
@@ -179,6 +183,8 @@ labs[order(names(labs))]
 
 names(vars_labels$column_name) <- vars_labels$display_en
 vars_labels$labs2 <- labs
+
+vars_labels$question_en_comp <- paste0(vars_labels$question_en, vars_labels$responses_en_rec, sep = " ")
 
 saveRDS(labs, "C:/Users/plutowl/Desktop/labs.rds")
 
