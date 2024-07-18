@@ -5,6 +5,8 @@ library(srvyr)
 library(dplyr)
 library(ggplot2)
 library(lazyeval)
+library(stringr)
+
 library("shinyWidgets")
 lapop_fonts_design()
 
