@@ -3,7 +3,7 @@ library(haven)
 library(srvyr)
 # library(expss)
 
-# setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny/data")
+setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny/data")
 
 gm <- haven::read_dta("C:/Users/plutowl/Desktop/gm_en.dta")
 pais_lab <- read.csv("pais_lab.csv")

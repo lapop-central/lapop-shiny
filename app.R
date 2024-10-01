@@ -65,15 +65,6 @@ ui <- fluidPage(
                   labs[order(names(labs))],
                   selected = "ing4"),
       
-      # selectInput("pais","Countries",
-      #             sort(levels(as_factor(dstrata$variables$pais)[!is.na(dstrata$variables$pais)])), 
-      #             multiple = TRUE,
-      #             selected = c("Argentina", "Bolivia", "Brazil", "Chile",
-      #                          "Colombia", "Costa Rica", "Dominican Republic",
-      #                          "Ecuador", "El Salvador", "Guatemala", "Haiti",
-      #                          "Honduras", "Jamaica", "Mexico", "Nicaragua", 
-      #                          "Panama", "Paraguay", "Peru", "Uruguay")),
-      
       pickerInput(inputId = "pais", 
                   label = "Countries",
                   choices = sort(levels(as_factor(dstrata$variables$pais)[!is.na(dstrata$variables$pais)])),
@@ -82,11 +73,7 @@ ui <- fluidPage(
                                "Ecuador", "El Salvador", "Guatemala", "Haiti",
                                "Honduras", "Jamaica", "Mexico", "Nicaragua", 
                                "Panama", "Paraguay", "Peru", "Uruguay"),
-                  options = list(`actions-box` = TRUE
-                                 # `selected-text-format` = "count > 2",
-                                 # `count-selected-text` = "{0}/{1} fruits"
-                  ),
-                  # options = list
+                  options = list(`actions-box` = TRUE),
                   multiple = TRUE), 
       
       
@@ -110,21 +97,7 @@ ui <- fluidPage(
       #this makes slider input only integers
       tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
       
-      # checkboxGroupInput("wave", "Survey Round(s)",
-      #                    choices = c("2004" = "2004",
-      #                      "2006" = "2006",
-      #                      "2008" = "2008",
-      #                      "2010" = "2010",
-      #                      "2012" = "2012",
-      #                      "2014" = "2014",
-      #                      "2016/17" = "2016/17",
-      #                      "2018/19" = "2018/19",
-      #                      "2021" = "2021",
-      #                      "2023" = "2023"),
-      #                    selected = c("2006", "2008", "2010", "2012", "2014",
-      #                                 "2016/17", "2018/19", "2021", "2023"),
-      #                    inline = TRUE), 
-      
+
       
       pickerInput(inputId = "wave", 
                   label = "Survey Rounds",
@@ -140,43 +113,19 @@ ui <- fluidPage(
                                      "2023" = "2023"),
                          selected = c("2006", "2008", "2010", "2012", "2014",
                                       "2016/17", "2018/19", "2021", "2023"),
-                  options = list(`actions-box` = TRUE
-                                 # `selected-text-format` = "count > 2",
-                                 # `count-selected-text` = "{0}/{1} fruits"
-                                 ),
+                  options = list(`actions-box` = TRUE),
                   # options = list
                          multiple = TRUE), 
       
-      # checkboxInput('all', "Select All/None", value = FALSE),
-      
-      # Input: Checkbox for whether outliers should be included ----
-      # checkboxInput("rescale", "Dichotomize?", TRUE),
-      
-      
-      # conditionalPanel(
-      #   'input.tabs == "Time Series" | input.tabs == "Cross-Country" | input.tabs == "Demographic Breakdown"',
-      #   sliderInput("recode",
-      #               "Response values included in positive category?",
-      #               min = 1,
-      #               max = 7,
-      #               # round = TRUE,
-      #               step = 1,
-      #               value = c(5, 7))
-      # ),
-      
+
       conditionalPanel(
         'input.tabs == "Time Series" | input.tabs == "Cross-Country" | input.tabs == "Breakdown"',
         uiOutput("sliderUI"),
       ),
       
       
-      # uiOutput("mychoices"),
-      # c("None" = "None",
-      #   "Crime Victimization" = "vic1ext",
-      #   "Support for Democracy" = "ing4")
       conditionalPanel(
         'input.tabs == "Breakdown"',
-        # uiOutput("sliderUI"),
         selectInput("variable_sec", "Secondary Variable",
                     c("None" = "None",
                       labs[order(names(labs))])),
@@ -192,8 +141,7 @@ ui <- fluidPage(
     
       actionButton("go", "Generate")
       
-      # actionButton("reset_input", "Reset inputs")
-      
+
     ),
     
     # Main panel for displaying outputs ----
@@ -224,10 +172,9 @@ ui <- fluidPage(
 
 
 
-# Define server logic to plot various variables against mpg ----
+# Define server logic to plot various variables ----
 server <- function(input, output, session) {
   
-  # Compute the formula text ----
   formulaText <- reactive({
     paste(input$variable)
   })
@@ -270,26 +217,7 @@ server <- function(input, output, session) {
   })
   
   
-  # observeEvent(input$reset_input, {
-  #   shinyjs::reset("side-panel")
-  # })
-  
-  # observeEvent(input$reset_input, {
-  #   updateSelectInput(session, "pais", selected = NA)
-  #   updateSelectInput(session, "wave", selected = NA)
-  #   updateSelectInput(session, "recode", selected = c(1, 1))
-  #   
-  #       
-  #       # updateNumericInput(session, "y","Y", NA)
-  # })
-  # 
-  # observe({
-  #   updateCheckboxGroupInput(
-  #     session, 'wave', choices = myChoices,
-  #     selected = if(input$all) myChoices
-  #   )
-  # })
-  
+
   dff <- eventReactive(input$go, ignoreNULL = FALSE, {
     dstrata %>%
       filter(as_factor(wave) %in% input$wave) %>%
@@ -543,9 +471,7 @@ server <- function(input, output, session) {
     return(dta_mover_ur)
   })
   
-  
-  
-  
+  #combine all separate df for demographic variables into one mover df
   moverd <- eventReactive(input$go, ignoreNULL = FALSE, { 
     dta_mover <- Error(rbind(secdf(), genderdf(), edaddf(), wealthdf(), eddf(), urdf()))
     validate(
@@ -603,42 +529,10 @@ server <- function(input, output, session) {
       }
     }
   )
-  
-  
-
-  
-  # 
-  # mover_secd <- eventReactive(input$go, {
-  #   
-  #   dta_mover_sec = dff() %>%
-  #     group_by(vallabel = haven::as_factor(zap_missing(input$variable_sec))) %>%
-  #     summarise_at(vars(outcome()),
-  #                  list(prop = ~survey_mean(between(., input$recode[1], 
-  #                                                   input$recode[2]), 
-  #                                           na.rm = TRUE, 
-  #                                           vartype = "ci") * 100)) %>%
-  #     mutate(varlabel = "Secondary Variable",
-  #            proplabel = paste0(round(prop), "%")) %>%
-  #     rename(.,  lb = prop_low, ub = prop_upp) %>%
-  #     drop_na(.)
-  #   
-  #   dta_mover_sec$vallabel <- as.character(dta_mover_sec$vallabel)
-  #   
-  #   dta_mover_secg <- lapop_mover(dta_mover_sec, subtitle = "% in positive category",
-  #                         source_info = "LAPOP Lab, AmericasBarometer")
-  #   return(dta_mover_secg)
-  # })
-  # 
-  # 
-  # output$mover_sec <- renderPlot({
-  #   dta_mover_secd()
-  # })
-  # 
-  
-  
 }
 
 
 shinyApp(ui, server)
 
 # runApp("C:/Users/plutowl/Documents/GitHub/lapop-shiny/shinyapp")
+
