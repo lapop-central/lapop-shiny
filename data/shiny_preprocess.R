@@ -99,12 +99,14 @@ gm$wealthf <- factor(gm$wealth,
                         levels = c(1, 2, 3, 4, 5),
                         labels = c("Low", "2", "3", "4", "High"))
 
-gm$l1 <- ifelse(is.na(gm$l1), gm$ideology, gm$l1)
-gm$l1 <- ifelse(is.na(gm$l1), gm$l1n, gm$l1)
-gm$l1 <- ifelse(is.na(gm$l1), gm$l1bn, gm$l1)
-gm$l1 <- ifelse(is.na(gm$l1), gm$l1b, gm$l1)
+# gm$l1 <- ifelse(is.na(gm$l1), gm$ideology, gm$l1)
+# gm$l1 <- ifelse(is.na(gm$l1), gm$l1n, gm$l1)
+# gm$l1 <- ifelse(is.na(gm$l1), gm$l1bn, gm$l1)
+# gm$l1 <- ifelse(is.na(gm$l1), gm$l1b, gm$l1)
+# 
+# gm$l1 <- factor(gm$l1, labels = c("Left/liberal", "2", "3", "4", "5", "6", "7", "8", "9", "Right/conservative"))
 
-gm$l1 <- factor(gm$l1, labels = c("Left/liberal", "2", "3", "4", "5", "6", "7", "8", "9", "Right/conservative"))
+# table(as.numeric(gmr$l1))
 
 gm <- gm %>%
   mutate(across(ur, ~ if_else(is.na(ur) & ur1new == 1, 1, .))) %>%

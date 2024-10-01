@@ -37,11 +37,20 @@ recode a4r_new (3=1 "Selected") (1/2=0 "Not Selected") (4=0 "Not Selected"), gen
 recode a4r_new (4=1 "Selected") (1/3=0 "Not Selected"), gen(a4_other)
 
 ** fix data error for fs2 coding in Canada
-replace fs2=0 if fs2==1 & wave==2024 & pais==41
-replace fs2=1 if fs2==2 & wave==2024 & pais==41
+replace fs2=0 if fs2==1 & wave==2023 & pais==41
+replace fs2=1 if fs2==2 & wave==2023 & pais==41
 
 ** Combine gi0 and gi0n (one response label changed)
 replace gi0n = gi0 if missing(gi0n)
+
+** Combine different ideology measures
+replace l1 = ideology if missing(l1)
+replace l1 = l1n if missing(l1)
+replace l1 = l1bn if missing(l1)
+replace l1 = l1b if missing(l1)
+
+lab def l1_en 1 "Left/liberal" 10 "Right/conservative", modify
+lab val l1 l1_en
 
 ** reverse response label order for some variables (so that all go from low --> high)
 foreach  var of varlist aoj11 aoj12 cp13 cp8 exc7 env2b gi0n idio2 it1 jc10 jc13 jc15a jc16a m1 mil10a mil10e np1 pn4 pol1 q10a q10e q14 q5a q5b sd2new2 sd3new2 sd6new2 soct2 vb10 vb2 vb50 vic1ext w14a wf1 {
@@ -51,7 +60,7 @@ foreach  var of varlist aoj11 aoj12 cp13 cp8 exc7 env2b gi0n idio2 it1 jc10 jc13
 
 rename *_r2 * 
 
-
+** IMPORTANT: save datasets outside of GitHub -- the files are too large for the repo
 save "C:\Users\plutowl\Desktop\gm_en.dta", replace
 *save "C:\Users\plutowl\Desktop\gm_es.dta", replace
 
