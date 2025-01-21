@@ -1,0 +1,13 @@
+name: lapop-shiny
+title: lapop-shiny
+username: lukepdata
+account: lukepdata
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13355337
+bundleId: 9622792
+url: https://lukepdata.shinyapps.io/lapop-shiny/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|global.R|gmrstrata.rds|LICENSE|data

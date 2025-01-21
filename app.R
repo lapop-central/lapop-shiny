@@ -1,4 +1,3 @@
-library(shiny)
 library(lapop)
 library(haven)
 library(srvyr)
@@ -10,19 +9,9 @@ library(shinyWidgets)
 
 lapop_fonts_design()
 
-# setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny")
-
-# gm <- read_dta("C:/Users/plutowl/Desktop/gmr.dta")
-#
-# dstrata <- gm %>%
-#   as_survey(strata = strata, weights = weight1500)
-
-# dstrata <- readRDS("C:/Users/plutowl/Downloads/gmrstrata.rds")
-
-
-dstrata <- readRDS("data/gmrstrata.rds")
-labs <- readRDS("data/labs.rds")
-vars_labels <- read.csv("data/new variables for data playground_mr_lap.csv", encoding = "latin1")
+dstrata <- readRDS("gmrstrata.rds")
+labs <- readRDS("labs.rds")
+vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
 
 
 Error<-function(x){
@@ -49,7 +38,7 @@ omit_na_edges <- function(df) {
 
 # Define UI for miles per gallon app ----
 ui <- fluidPage(
-  
+
   # App title ----
   titlePanel("AmericasBarometer Data Playground"),
   
@@ -222,7 +211,6 @@ server <- function(input, output, session) {
     dstrata %>%
       filter(as_factor(wave) %in% input$wave) %>%
       filter(pais_nam %in% input$pais)
-    
   })
   
   # Return the formula text for printing as a caption ----
@@ -253,34 +241,34 @@ server <- function(input, output, session) {
     
 #hist 
 # must break into data event, graph event, and renderPlot to get download buttons to work
-  histd <- eventReactive(input$go, ignoreNULL = FALSE, {
-    hist_df = Error(
-      dff() %>%
-      group_by(across(outcome())) %>%
-      summarise(n = unweighted(n()))  %>%
-      drop_na() %>%
-      rename(cat = 1) %>%
-      mutate(prop = prop.table(n) * 100,
-             proplabel = paste(round(prop), "%", sep = ""),
-             cat = str_wrap(as.character(haven::as_factor(cat)), width = 25)))  
+histd <- eventReactive(input$go, ignoreNULL = FALSE, {
+  hist_df = Error(
+    dff() %>%
+    group_by(across(outcome())) %>%
+    summarise(n = unweighted(n()))  %>%
+    drop_na() %>%
+    rename(cat = 1) %>%
+    mutate(prop = prop.table(n) * 100,
+           proplabel = paste(round(prop), "%", sep = ""),
+           cat = str_wrap(as.character(haven::as_factor(cat)), width = 25)))
 
-    validate(
-      need(hist_df, "Error: question was not asked in this country/year combination" )
-    )
-    return(hist_df)
+  validate(
+    need(hist_df, "Error: question was not asked in this country/year combination" )
+  )
+  return(hist_df)
+  })
 
-    })
-
+  
   histg <- eventReactive(input$go, ignoreNULL = FALSE, {
-
-    histg <- lapop_hist(histd(), source_info = "LAPOP Lab, AmericasBarometer")
+    histg <- lapop_hist(histd(), 
+                        source_info = ", AmericasBarometer")
     return(histg)
   })
-  
+
   output$hist <- renderPlot({
     return(histg())
   })
-  
+
   
   #ts
   tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
@@ -288,7 +276,7 @@ server <- function(input, output, session) {
       dff() %>%
       group_by(as.character(as_factor(wave))) %>%
       summarise_at(vars(outcome()),
-                   list(prop = ~survey_mean(between(., input$recode[1], 
+                   list(prop = ~survey_mean(between(., input$recode[1],
                                                     input$recode[2]),
                                             na.rm = TRUE,
                                             vartype = "ci") * 100)) %>%
@@ -304,12 +292,12 @@ server <- function(input, output, session) {
   })
   
   tsg <- eventReactive(input$go, ignoreNULL = FALSE, {
-    tsg = lapop_ts(tsd(), source_info = "LAPOP Lab, AmericasBarometer",
+    tsg = lapop_ts(tsd(), source_info = ", AmericasBarometer",
                        subtitle = "% in selected category")
     return(tsg)
   })
-  
-  
+
+
   output$ts <- renderPlot({
     return(tsg())
   })
@@ -320,9 +308,9 @@ server <- function(input, output, session) {
       dff() %>%
       group_by(vallabel = pais_lab) %>%
       summarise_at(vars(outcome()),
-                   list(prop = ~survey_mean(between(., input$recode[1], 
-                                                    input$recode[2]), 
-                                            na.rm = TRUE, 
+                   list(prop = ~survey_mean(between(., input$recode[1],
+                                                    input$recode[2]),
+                                            na.rm = TRUE,
                                             vartype = "ci") * 100)) %>%
       filter(prop != 0) %>%
       mutate(proplabel = paste0(round(prop), "%")) %>%
@@ -336,10 +324,10 @@ server <- function(input, output, session) {
   
   ccg <- eventReactive(input$go, ignoreNULL = FALSE, {
     ccg = lapop_cc(ccd(), sort = "hi-lo", subtitle = "% in selected category",
-             source_info = "LAPOP Lab, AmericasBarometer")
+             source_info = ", AmericasBarometer")
     return(ccg)
   })
-  
+
   output$cc <- renderPlot({
     return(ccg())
   })
@@ -354,9 +342,9 @@ server <- function(input, output, session) {
         dff() %>%
         group_by_at(input$variable_sec) %>%
         summarise_at(vars(outcome()),
-                     list(prop = ~survey_mean(between(., input$recode[1], 
-                                                      input$recode[2]), 
-                                              na.rm = TRUE, 
+                     list(prop = ~survey_mean(between(., input$recode[1],
+                                                      input$recode[2]),
+                                              na.rm = TRUE,
                                               vartype = "ci") * 100)) %>%
         rename(.,  vallabel = 1, lb = prop_low, ub = prop_upp) %>%
         mutate(vallabel = str_wrap(as.character(as_factor(zap_missing(vallabel))), width = 25),
@@ -367,16 +355,16 @@ server <- function(input, output, session) {
     }
     return(dta_mover_sec)
   })
-  
-  
+
+
   genderdf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if("gendermc" %in% input$demog) {
       dta_mover_ge = dff() %>%
         group_by(vallabel = haven::as_factor(zap_missing(gendermc))) %>%
         summarise_at(vars(outcome()),
-                     list(prop = ~survey_mean(between(., input$recode[1], 
-                                                      input$recode[2]), 
-                                              na.rm = TRUE, 
+                     list(prop = ~survey_mean(between(., input$recode[1],
+                                                      input$recode[2]),
+                                              na.rm = TRUE,
                                               vartype = "ci") * 100)) %>%
         mutate(varlabel = "Gender",
                proplabel = paste0(round(prop), "%")) %>%
@@ -388,13 +376,13 @@ server <- function(input, output, session) {
     }
       return(dta_mover_ge)
     })
-  
+
   wealthdf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if("wealth" %in% input$demog) {
     dta_mover_w = dff() %>%
       group_by(vallabel = zap_missing(wealthf)) %>%
       summarise_at(vars(outcome()),
-                   list(prop = ~survey_mean(between(., input$recode[1], 
+                   list(prop = ~survey_mean(between(., input$recode[1],
                                                     input$recode[2]),
                                             na.rm = TRUE,
                                             vartype = "ci") * 100)) %>%
@@ -408,14 +396,14 @@ server <- function(input, output, session) {
     }
     return(dta_mover_w)
   })
-  
-  
+
+
   eddf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if("edre" %in% input$demog) {
     dta_mover_ed = dff() %>%
       group_by(vallabel = zap_missing(edrerf)) %>%
       summarise_at(vars(outcome()),
-                   list(prop = ~survey_mean(between(., input$recode[1], 
+                   list(prop = ~survey_mean(between(., input$recode[1],
                                                     input$recode[2]),
                                             na.rm = TRUE,
                                             vartype = "ci") * 100)) %>%
@@ -428,7 +416,7 @@ server <- function(input, output, session) {
       dta_mover_ed = NULL
     }
     return(dta_mover_ed)
-    
+
   })
 
   edaddf <- eventReactive(input$go, ignoreNULL = FALSE, {
@@ -436,27 +424,27 @@ server <- function(input, output, session) {
     dta_mover_ag = dff() %>%
       group_by(vallabel = haven::as_factor(zap_missing(edad))) %>%
       summarise_at(vars(outcome()),
-                   list(prop = ~survey_mean(between(., input$recode[1], 
+                   list(prop = ~survey_mean(between(., input$recode[1],
                                                     input$recode[2]),
                                             na.rm = TRUE,
                                             vartype = "ci") * 100)) %>%
       mutate(varlabel = "Age",
              proplabel = paste0(round(prop), "%")) %>%
       rename(.,  lb = prop_low, ub = prop_upp) %>%
-      drop_na(.)     
+      drop_na(.)
     }
     else {
       dta_mover_ag = NULL
     }
     return(dta_mover_ag)
   })
-  
+
   urdf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if("ur" %in% input$demog) {
       dta_mover_ur = dff() %>%
       group_by(vallabel = haven::as_factor(zap_missing(ur))) %>%
       summarise_at(vars(outcome()),
-                   list(prop = ~survey_mean(between(., input$recode[1], 
+                   list(prop = ~survey_mean(between(., input$recode[1],
                                                     input$recode[2]),
                                             na.rm = TRUE,
                                             vartype = "ci") * 100)) %>%
@@ -470,9 +458,9 @@ server <- function(input, output, session) {
     }
     return(dta_mover_ur)
   })
-  
+
   #combine all separate df for demographic variables into one mover df
-  moverd <- eventReactive(input$go, ignoreNULL = FALSE, { 
+  moverd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_mover <- Error(rbind(secdf(), genderdf(), edaddf(), wealthdf(), eddf(), urdf()))
     validate(
       need(dta_mover, "Error: question was not asked in this country/year combination" )
@@ -480,21 +468,21 @@ server <- function(input, output, session) {
     dta_mover$vallabel <- as.character(dta_mover$vallabel)
     return(dta_mover)
   })
-  
-  moverg <- eventReactive(input$go, ignoreNULL = FALSE, { 
+
+  moverg <- eventReactive(input$go, ignoreNULL = FALSE, {
     moverg = lapop_mover(moverd(), subtitle = "% in selected category",
-                source_info = "LAPOP Lab, AmericasBarometer")
+                source_info = ", AmericasBarometer")
     return(moverg)
   })
-  
+
   output$mover <- renderPlot({
     return(moverg())
   })
-  
+
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histogram", "hist.svg", 
-             ifelse(input$tabs == "Time Series", "ts.svg", 
+      ifelse(input$tabs == "Histogram", "hist.svg",
+             ifelse(input$tabs == "Time Series", "ts.svg",
                     ifelse(input$tabs == "Cross-Country", "cc.svg", "mover.svg")))
     },
     content = function(file) {
@@ -513,8 +501,8 @@ server <- function(input, output, session) {
   
   output$downloadTable <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histogram", "hist.csv", 
-             ifelse(input$tabs == "Time Series", "ts.csv", 
+      ifelse(input$tabs == "Histogram", "hist.csv",
+             ifelse(input$tabs == "Time Series", "ts.csv",
                     ifelse(input$tabs == "Cross-Country", "cc.csv", "mover.csv")))
     },
     content = function(file) {
@@ -534,5 +522,5 @@ server <- function(input, output, session) {
 
 shinyApp(ui, server)
 
-# runApp("C:/Users/plutowl/Documents/GitHub/lapop-shiny/shinyapp")
+
 
