@@ -7,7 +7,7 @@ library(lazyeval)
 library(stringr)
 library(shinyWidgets)
 
-lapop_fonts_design()
+lapop_fonts()
 
 dstrata <- readRDS("gmrstrata.rds")
 labs <- readRDS("labs.rds")
