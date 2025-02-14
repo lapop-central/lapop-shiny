@@ -20,6 +20,45 @@
       ],
       "Hash": "065ae649b05f1ff66bb0c793107508f5"
     },
+    "Formula": {
+      "Package": "Formula",
+      "Version": "1.2-5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "stats"
+      ],
+      "Hash": "7a29697b75e027767a53fde6c903eca7"
+    },
+    "Hmisc": {
+      "Package": "Hmisc",
+      "Version": "5.2-2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "Formula",
+        "R",
+        "base64enc",
+        "cluster",
+        "colorspace",
+        "data.table",
+        "foreign",
+        "ggplot2",
+        "grid",
+        "gridExtra",
+        "gtable",
+        "htmlTable",
+        "htmltools",
+        "knitr",
+        "methods",
+        "nnet",
+        "rmarkdown",
+        "rpart",
+        "viridis"
+      ],
+      "Hash": "ce88f29ff07b63c77f9b7ac747b9321b"
+    },
     "MASS": {
       "Package": "MASS",
       "Version": "7.3-58.1",
@@ -241,6 +280,20 @@
       ],
       "Hash": "3f038e5ac7f41d4ac41ce658c85e3042"
     },
+    "cluster": {
+      "Package": "cluster",
+      "Version": "2.1.4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "grDevices",
+        "graphics",
+        "stats",
+        "utils"
+      ],
+      "Hash": "5edbbabab6ce0bf7900a74fd4358628e"
+    },
     "colorspace": {
       "Package": "colorspace",
       "Version": "2.1-1",
@@ -418,6 +471,19 @@
         "tibble"
       ],
       "Hash": "1a0a9a3d5083d0d573c4214576f1e690"
+    },
+    "foreign": {
+      "Package": "foreign",
+      "Version": "0.8-83",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "methods",
+        "stats",
+        "utils"
+      ],
+      "Hash": "4e43a8846712a6d5991b19b9bd5f9199"
     },
     "fs": {
       "Package": "fs",
@@ -829,16 +895,6 @@
       ],
       "Hash": "b64cdbb2b340437c4ee047a1f4c4377b"
     },
-    "lazyeval": {
-      "Package": "lazyeval",
-      "Version": "0.2.2",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R"
-      ],
-      "Hash": "d908914ae53b04d4c0c0fd72ecc35370"
-    },
     "lifecycle": {
       "Package": "lifecycle",
       "Version": "1.0.4",
@@ -1000,6 +1056,18 @@
       ],
       "Hash": "02e3c6e7df163aafa8477225e6827bc5"
     },
+    "nnet": {
+      "Package": "nnet",
+      "Version": "7.3-18",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "stats",
+        "utils"
+      ],
+      "Hash": "170da2130d5332bea7d6ede01875ba1d"
+    },
     "numDeriv": {
       "Package": "numDeriv",
       "Version": "2016.8-1.1",
@@ -1158,13 +1226,8 @@
     },
     "renv": {
       "Package": "renv",
-      "Version": "1.0.11",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "utils"
-      ],
-      "Hash": "47623f66b4e80b3b0587bc5d7b309888"
+      "Version": "1.1.1",
+      "Source": "Repository"
     },
     "rlang": {
       "Package": "rlang",
@@ -1199,6 +1262,19 @@
         "yaml"
       ],
       "Hash": "df99277f63d01c34e95e3d2f06a79736"
+    },
+    "rpart": {
+      "Package": "rpart",
+      "Version": "4.1.19",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "grDevices",
+        "graphics",
+        "stats"
+      ],
+      "Hash": "b3c892a81783376cc2204af0f5805a80"
     },
     "rsconnect": {
       "Package": "rsconnect",
@@ -1577,6 +1653,19 @@
         "rlang"
       ],
       "Hash": "c03fa420630029418f7e6da3667aac4a"
+    },
+    "viridis": {
+      "Package": "viridis",
+      "Version": "0.6.5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Requirements": [
+        "R",
+        "ggplot2",
+        "gridExtra",
+        "viridisLite"
+      ],
+      "Hash": "acd96d9fa70adeea4a5a1150609b9745"
     },
     "viridisLite": {
       "Package": "viridisLite",
