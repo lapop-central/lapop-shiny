@@ -74,21 +74,16 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
   return(processed_data)
 }
 
-
-# Define UI for miles per gallon app ----
 ui <- fluidPage(
 
-  # App title ----
   titlePanel("AmericasBarometer Data Playground"),
   
-  # Sidebar layout with input and output definitions ----
   sidebarLayout(
     
     # Sidebar panel for inputs ----
     sidebarPanel(
                        
       
-      # Input: Selector for variable to plot against mpg ----
       selectInput("variable", "Variable",
                   labs[order(names(labs))],
                   selected = "ing4"),
@@ -145,7 +140,7 @@ ui <- fluidPage(
                   # options = list
                          multiple = TRUE), 
       
-
+# show recode slider only for time series, cc, and breakdown (not hist)
       conditionalPanel(
         'input.tabs == "Time Series" | input.tabs == "Cross-Country" | input.tabs == "Breakdown"',
         uiOutput("sliderUI"),
@@ -254,7 +249,7 @@ server <- function(input, output, session) {
       filter(as_factor(wave) %in% input$wave) %>%
       filter(pais_nam %in% input$pais)
   })  
-  # Return the formula text for printing as a caption ----
+
   cap <- renderText({
     vars_labels$question_short_en[which(vars_labels$column_name == formulaText())]
   })
