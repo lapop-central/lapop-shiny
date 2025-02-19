@@ -297,6 +297,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   
   histg <- eventReactive(input$go, ignoreNULL = FALSE, {
     histg <- lapop_hist(histd(), 
+                        ymax = ifelse(any(histd()$prop > 90), 110, 100), 
                         source_info = ", AmericasBarometer Data Playground")
     return(histg)
   })
@@ -314,7 +315,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
         mutate(outcome_rec = case_when(
           is.na(!!sym(outcome())) ~ NA_real_,
           !!sym(outcome()) >= input$recode[1] &
-            !!sym(outcome()) <= input$recode[2] ~ 100,
+          !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(as.character(as_factor(wave))) %>%
         summarise_at(vars("outcome_rec"),
@@ -332,7 +333,11 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   })
   
   tsg <- eventReactive(input$go, ignoreNULL = FALSE, {
-    tsg = lapop_ts(tsd(), source_info = ", AmericasBarometer Data Playground",
+    tsg = lapop_ts(tsd(), 
+                   ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
+                   # # label_vjust = -1.5,
+                   label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
+                   source_info = ", AmericasBarometer Data Playground",
                        subtitle = "% in selected category")
     return(tsg)
   })
@@ -366,8 +371,10 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   })
   
   ccg <- eventReactive(input$go, ignoreNULL = FALSE, {
-    ccg = lapop_cc(ccd(), sort = "hi-lo", subtitle = "% in selected category",
-             source_info = ", AmericasBarometer Data Playground")
+    ccg = lapop_cc(ccd(), sort = "hi-lo", 
+                   subtitle = "% in selected category",
+                   ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
+                   source_info = ", AmericasBarometer Data Playground")
     return(ccg)
   })
 
@@ -471,7 +478,11 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   })
   
   moverg <- eventReactive(input$go, ignoreNULL = FALSE, {
-    moverg <- lapop_mover(moverd(), subtitle = "% in selected category", source_info = ", AmericasBarometer Data Playground")
+    moverg <- lapop_mover(moverd(), 
+                          subtitle = "% in selected category", 
+                          ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
+                                            ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
+                          source_info = ", AmericasBarometer Data Playground")
     return(moverg)
   })
   

@@ -1,15 +1,12 @@
 library(dplyr)
 library(haven)
 library(srvyr)
-# library(expss)
 
-setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny/Data Preprocessing")
+# setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny/Data Preprocessing")
 
 # gm <- haven::read_dta("C:/Users/plutowl/Desktop/gm_en.dta")
 pais_lab <- read.csv("pais_lab.csv")
 gm <- merge(gm, pais_lab, by.x = "pais", by.y = "pais_num")
-
-# table(as_factor(gm$pais))
 
 expss::add_val_lab(gm$pais) = expss::num_lab("24 Guyana")
 
@@ -104,9 +101,9 @@ gm$l1 <- ifelse(is.na(gm$l1), gm$l1n, gm$l1)
 gm$l1 <- ifelse(is.na(gm$l1), gm$l1bn, gm$l1)
 gm$l1 <- ifelse(is.na(gm$l1), gm$l1b, gm$l1)
 
-gm$l1 <- factor(gm$l1, labels = c("Left/liberal", "2", "3", "4", "5", "6", "7", "8", "9", "Right/conservative"))
-
-# table(as.numeric(gmr$l1))
+gm$l1 = labelled(gm$l1, 
+             c("Left/liberal" = 1, "Right/conservative" = 10),
+             label = "Ideology")
 
 gm <- gm %>%
   mutate(across(ur, ~ if_else(is.na(ur) & ur1new == 1, 1, .))) %>%
@@ -143,7 +140,7 @@ vars3[!vars3 %in% names(gm)]
 
 gmr <- gm[vars3]
 
-saveRDS(gmr, "gmrstrata2.rds")
+saveRDS(gmr, "gm_shiny_data.rds")
 
 # 
 # dstrata <- gmr %>%
