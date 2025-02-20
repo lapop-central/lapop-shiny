@@ -1,3 +1,5 @@
+# Packages loading
+# # -----------------------------------------------------------------------
 library(lapop)
 library(haven)
 library(dplyr)
@@ -8,20 +10,21 @@ library(tidyr)
 
 lapop_fonts()
 
-dstrata <- readRDS("gm_shiny_data.rds")
-labs <- readRDS("labs.rds")
-vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
+dstrata <- readRDS("gm_shiny_data.rds") # Grand Merge for Shiny
+vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1") # Labels data
+labs <- readRDS("labs.rds") # Labs vector
 
-
-
+# Error handling function (so app does not break)
 Error<-function(x){
   tryCatch(x,error=function(e) return(FALSE))
 }
 
+# AB waves
 waves_total = c("2004", "2006", "2008", "2010", "2012", "2014", "2016/17", "2018/19", "2021", "2023")
 
 
-#helper function for cleaning ts -- handle missing values at end or middle of series
+# Helper function for cleaning Time-series
+# handle missing values at end or middle of series
 omit_na_edges <- function(df) {
   # Find which rows have NA values
   na_rows <- apply(df, 1, function(row) any(is.na(row)))
@@ -36,11 +39,11 @@ omit_na_edges <- function(df) {
   return(df_clean)
 }
 
-#custom weighted averages and CIs, to speed up computational speed vs. survey_mean
+# Custom weighted averages & CIs, to speed up computational speed vs. survey_mean()
 weighted.ttest.ci <- function(x, weights) {
   nx <- length(x)
-  vx <- Hmisc::wtd.var(x, weights, normwt = TRUE, na.rm = TRUE) ## From Hmisc
-  mx <- weighted.mean(x, weights, na.rm = TRUE)
+  vx <- Hmisc::wtd.var(x, weights, normwt = TRUE, na.rm = TRUE) # Weighted variance
+  mx <- weighted.mean(x, weights, na.rm = TRUE) # Weighted mean
   stderr <- sqrt(vx/nx)
   tstat <- mx/stderr ## not mx - mu
   cint <- qt(1 - 0.05/2, nx - 1)
@@ -50,11 +53,14 @@ weighted.ttest.ci <- function(x, weights) {
   return(result)
 } 
 
-# helper function for mover
-process_data <- function(data, outcome_var, recode_range, group_var, var_label, weight_var = "weight1500") {
+# Helper function for mover plot
+process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
+                         weight_var = "weight1500") {
+  
   if (is.null(group_var)) {
     return(NULL)
   }
+  
   processed_data <- data %>%
     drop_na(!!sym(outcome_var)) %>%
     mutate(outcome_rec = case_when(
@@ -62,7 +68,7 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
       !!sym(outcome_var) >= recode_range[1] & !!sym(outcome_var) <= recode_range[2] ~ 100,
       TRUE ~ 0
     )) %>%
-    group_by(vallabel = haven::as_factor(zap_missing(!!sym(group_var)))) %>%
+    group_by(vallabel = haven::as_factor(haven::zap_missing(!!sym(group_var)))) %>%
     summarise_at(vars("outcome_rec"), list(~weighted.ttest.ci(., !!sym(weight_var)))) %>%
     unnest_wider(col = "outcome_rec") %>%
     mutate(
@@ -74,6 +80,7 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
   return(processed_data)
 }
 
+# Creating User Interface
 ui <- fluidPage(
 
   titlePanel("AmericasBarometer Data Playground"),
@@ -88,6 +95,7 @@ ui <- fluidPage(
                   labs[order(names(labs))],
                   selected = "ing4"),
       
+      # Default picks all countries
       pickerInput(inputId = "pais", 
                   label = "Countries",
                   choices = sort(levels(as_factor(dstrata$pais)[!is.na(dstrata$pais)])),
@@ -99,8 +107,7 @@ ui <- fluidPage(
                   options = list(`actions-box` = TRUE),
                   multiple = TRUE), 
       
-      
-      #this fixes a formatting issue with checkboxGroupInput below
+      # This fixes a formatting issue with checkboxGroupInput() below
       tags$head(
         tags$style(
           HTML(
@@ -117,10 +124,8 @@ ui <- fluidPage(
         ) 
       ),
       
-      #this makes slider input only integers
+      # This makes the slider input to allow only integers for AB years
       tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
-      
-
       
       pickerInput(inputId = "wave", 
                   label = "Survey Rounds",
@@ -140,12 +145,11 @@ ui <- fluidPage(
                   # options = list
                          multiple = TRUE), 
       
-# show recode slider only for time series, cc, and breakdown (not hist)
+# Show recode slider only for time series, CC, and breakdown/mover (not hist)
       conditionalPanel(
         'input.tabs == "Time Series" | input.tabs == "Cross-Country" | input.tabs == "Breakdown"',
         uiOutput("sliderUI"),
       ),
-      
       
       conditionalPanel(
         'input.tabs == "Breakdown"',
@@ -158,12 +162,11 @@ ui <- fluidPage(
                              "Wealth" = "wealth",
                              "Education" = "edre",
                              "Urban/Rural" = "ur"),
-                           selected = c("gendermc", "edad", "edre"),
+                           selected = c("gendermc", "edad", "edre"), # GENDERMC?
                            inline = TRUE)
       ),
     
       actionButton("go", "Generate")
-      
 
     ),
     
@@ -192,10 +195,8 @@ ui <- fluidPage(
   )
 )
 
-
-
-
 # Define server logic to plot various variables ----
+# The server function will be called when each client (browser) loads the Shiny app.
 server <- function(input, output, session) {
   
   formulaText <- reactive({
@@ -216,7 +217,10 @@ server <- function(input, output, session) {
   
   sliderParams <- reactiveValues(valuex = c(1, 1))
 
-  #set default slider values - 5-7 for 1-7 variable, 2 for 1-2 variable, 3-4 for 1-4 variable, etc.
+  #set default slider values:
+  # 5-7 for 1-7 variable,
+  # 2 for 1-2 variable,
+  # 3-4 for 1-4 variable, and so on...
   observeEvent(input$variable, {
     if (max(as.numeric(dstrata[[formulaText()]]), na.rm=TRUE) == 7) {
       sliderParams$valuex <- c(5, 7)
@@ -242,14 +246,14 @@ server <- function(input, output, session) {
                 step = 1)
   })
   
-  
-
+# Filtering data based on user's selection
   dff <- eventReactive(input$go, ignoreNULL = FALSE, {
     dstrata %>%
       filter(as_factor(wave) %in% input$wave) %>%
       filter(pais_nam %in% input$pais)
   })  
 
+# Rendering var caption based on user's var selection
   cap <- renderText({
     vars_labels$question_short_en[which(vars_labels$column_name == formulaText())]
   })
@@ -257,7 +261,7 @@ server <- function(input, output, session) {
   output$caption <- eventReactive(input$go, ignoreNULL = FALSE, {
     cap() 
   })
-  
+# Rendering qwording based on user's var selection  
   word <- renderText({
     vars_labels$question_en[which(vars_labels$column_name == formulaText())]
   })
@@ -266,6 +270,7 @@ server <- function(input, output, session) {
     word() 
   })
   
+# Rendering ROs based on user's var selection  
   resp <- renderText({
     vars_labels$responses_en_rec[which(vars_labels$column_name == formulaText())]
   })
@@ -275,7 +280,7 @@ server <- function(input, output, session) {
   })
 
     
-#hist 
+# Histogram
 # must break into data event, graph event, and renderPlot to get download buttons to work
 histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   hist_df = Error(
@@ -289,7 +294,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
              cat = str_wrap(as.character(haven::as_factor(cat)), width = 25)))
   
   validate(
-    need(hist_df, "Error: no data available. Please verify that this question was asked in this country/year combination")
+    need(hist_df, "Error: no data available. Please verify that this question was asked in this country/year combination.")
   )
   return(hist_df)
   })
@@ -307,7 +312,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   })
 
   
-  #ts
+# Time-series
   tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_ts = Error(
       dff() %>%
@@ -326,7 +331,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
         filter(prop != 0) 
     )
     validate(
-      need(dta_ts, "Error: no data available. Please verify that this question was asked in this country/year combination")
+      need(dta_ts, "Error: no data available. Please verify that this question was asked in this country/year combination.")
     )
     dta_ts = merge(dta_ts, data.frame(wave = as.character(waves_total), empty = 1), by = "wave", all.y = TRUE)
     return(omit_na_edges(dta_ts))
@@ -335,7 +340,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   tsg <- eventReactive(input$go, ignoreNULL = FALSE, {
     tsg = lapop_ts(tsd(), 
                    ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
-                   # # label_vjust = -1.5,
+                   #label_vjust = -1.5,
                    label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
                    source_info = ", AmericasBarometer Data Playground",
                        subtitle = "% in selected category")
@@ -347,7 +352,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     return(tsg())
   })
 
-#cc 
+# Cross-Country 
   ccd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_cc = Error(
       dff() %>%
@@ -392,7 +397,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
         outcome_var = outcome(),
         recode_range = input$recode,
         group_var = input$variable_sec,
-        var_label = str_wrap(variable_sec_lab(), width = 25)
+        var_label = stringr::str_wrap(variable_sec_lab(), width = 25)
       )
     }
   })
@@ -467,7 +472,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     }
   })
   
-  # Combine =demographic data frames into one df
+# Combine demographic data frames into one df
   moverd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_mover <- Error(rbind(secdf(), genderdf(), edaddf(), wealthdf(), eddf(), urdf()))
     validate(
@@ -490,7 +495,8 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     return(moverg())
   })
   
-
+# Download figures
+  
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histogram", "hist.svg",
@@ -509,7 +515,6 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
       }
     }
   )
-  
   
   output$downloadTable <- downloadHandler(
     filename = function(file) {
@@ -531,8 +536,6 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   )
 }
 
-
 shinyApp(ui, server)
 
-
-
+# END
