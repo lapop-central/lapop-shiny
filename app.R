@@ -1,18 +1,17 @@
 library(lapop)
 library(haven)
 library(dplyr)
+library(tidyr)
 library(stringr)
 library(shinyWidgets)
 library(Hmisc)
-library(tidyr)
+
 
 lapop_fonts()
 
 dstrata <- readRDS("gm_shiny_data.rds")
 labs <- readRDS("labs.rds")
 vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
-
-
 
 Error<-function(x){
   tryCatch(x,error=function(e) return(FALSE))
@@ -76,6 +75,8 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
 
 ui <- fluidPage(
 
+  
+  
   titlePanel("AmericasBarometer Data Playground"),
   
   sidebarLayout(
@@ -83,7 +84,6 @@ ui <- fluidPage(
     # Sidebar panel for inputs ----
     sidebarPanel(
                        
-      
       selectInput("variable", "Variable",
                   labs[order(names(labs))],
                   selected = "ing4"),
@@ -335,7 +335,6 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   tsg <- eventReactive(input$go, ignoreNULL = FALSE, {
     tsg = lapop_ts(tsd(), 
                    ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
-                   # # label_vjust = -1.5,
                    label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
                    source_info = ", AmericasBarometer Data Playground",
                        subtitle = "% in selected category")

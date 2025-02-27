@@ -1,28 +1,28 @@
-﻿pais_nam,pais_lab,pais_num
-Argentina,AR,17
-Bahamas,BS,28
-Belize,BZ,26
-Bolivia,BO,10
-Brazil,BR,15
-Canada,CA,41
-Chile,CL,13
-Colombia,CO,8
-Costa Rica,CR,6
-Dominican Republic,DO,21
-Ecuador,EC,9
-El Salvador,SV,3
-Grenada,GD,30
-Guatemala,GT,2
-Guyana,GY,24
-Haiti,HT,22
-Honduras,HN,4
-Jamaica,JM,23
-Mexico,MX,1
-Nicaragua,NI,5
-Panama,PA,7
-Paraguay,PY,12
-Peru,PE,11
-Suriname,SR,27
-Trinidad and Tobago,TT,25
-United States,US,40
-Uruguay,UY,14
+﻿pais_nam,pais_lab,pais_num,pais_nam_es
+Argentina,AR,17,Argentina
+Bahamas,BS,28,Bahamas
+Belize,BZ,26,Belice
+Bolivia,BO,10,Bolivia
+Brazil,BR,15,Brasil
+Canada,CA,41,Canadá
+Chile,CL,13,Chile
+Colombia,CO,8,Colombia
+Costa Rica,CR,6,Costa Rica
+Dominican Republic,DO,21,República Dominicana
+Ecuador,EC,9,Ecuador
+El Salvador,SV,3,El Salvador
+Grenada,GD,30,Grenada
+Guatemala,GT,2,Guatemala
+Guyana,GY,24,Guyana
+Haiti,HT,22,Haití
+Honduras,HN,4,Honduras
+Jamaica,JM,23,Jamaica
+Mexico,MX,1,México
+Nicaragua,NI,5,Nicaragua
+Panama,PA,7,Panama
+Paraguay,PY,12,Paraguay
+Peru,PE,11,Perú
+Suriname,SR,27,Surinam
+Trinidad and Tobago,TT,25,Trinidad y Tobago
+United States,US,40,Estados Unidos
+Uruguay,UY,14,Uruguay

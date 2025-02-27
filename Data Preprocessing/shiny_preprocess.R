@@ -2,10 +2,20 @@ library(dplyr)
 library(haven)
 library(srvyr)
 
-# setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny/Data Preprocessing")
+#if creating spanish version, set to true
+esp <- TRUE
 
-# gm <- haven::read_dta("C:/Users/plutowl/Desktop/gm_en.dta")
+setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny/Data Preprocessing")
+
+#read in gm data created from Stata do file
+# adjust your filepath here
+# path <- "C:/Users/plutowl/Desktop/"
+gm <- haven::read_dta(paste0(path, "gm_", ifelse(esp, "es", "en"), ".dta"))
+
 pais_lab <- read.csv("pais_lab.csv")
+if (esp) {
+  pais_lab$pais_nam <- pais_lab$pais_nam_es
+}
 gm <- merge(gm, pais_lab, by.x = "pais", by.y = "pais_num")
 
 expss::add_val_lab(gm$pais) = expss::num_lab("24 Guyana")
@@ -16,7 +26,8 @@ gm$genderm <- gm$sex
 gm$genderm <- ifelse(is.na(gm$genderm) &  gm$q1tc_r < 3, gm$q1tc_r, gm$genderm)
 gm$genderm <- ifelse(is.na(gm$genderm) &  gm$q1tb < 3, gm$q1tb, gm$genderm)
 gm$genderm <- ifelse(is.na(gm$genderm) &  gm$usq1tc < 3, gm$usq1tc, gm$genderm)
-gm$gendermc <- ifelse(gm$genderm == 1, "Men", "Women")
+gm$gendermc <- ifelse(gm$genderm == 1, ifelse(esp, "Hombres", "Men"), 
+                      ifelse(esp, "Mujeres", "Women"))
 
 gm$edrer <- NA
 gm$edrer <- ifelse(gm$edre < 3, 1,
@@ -88,22 +99,33 @@ gm$edrer <- ifelse(gm$edrer == 0, 1, gm$edrer)
 
 gm$edrerf <- factor(gm$edrer,
                        levels = c(1, 2, 3),
-                       labels = c("None/Primary", "Secondary", "Superior"))
-
+                       labels = ifelse(esp,
+                                       c("Ninguna/primaria", "Secundaria", "Superior"), 
+                                       c("None/Primary", "Secondary", "Superior")))
 
 gm$wealth[gm$wealth == 6] <- NA
 gm$wealthf <- factor(gm$wealth,
                         levels = c(1, 2, 3, 4, 5),
-                        labels = c("Low", "2", "3", "4", "High"))
+                        labels = ifelse(esp,
+                                        c("Baja", "2", "3", "4", "Alta"),
+                                        c("Low", "2", "3", "4", "High")))
 
 gm$l1 <- ifelse(is.na(gm$l1), gm$ideology, gm$l1)
 gm$l1 <- ifelse(is.na(gm$l1), gm$l1n, gm$l1)
 gm$l1 <- ifelse(is.na(gm$l1), gm$l1bn, gm$l1)
 gm$l1 <- ifelse(is.na(gm$l1), gm$l1b, gm$l1)
 
-gm$l1 = labelled(gm$l1, 
-             c("Left/liberal" = 1, "Right/conservative" = 10),
-             label = "Ideology")
+
+if (esp) {
+  gm$l1 = labelled(gm$l1,
+                   c("Izquierda/liberal" = 1, "Derecha/conservador" = 10),
+                   label = "Ideología")
+  
+} else {
+  gm$l1 = labelled(gm$l1,
+                   c("Left/liberal" = 1, "Right/conservative" = 10),
+               label = "Ideology")
+}
 
 gm <- gm %>%
   mutate(across(ur, ~ if_else(is.na(ur) & ur1new == 1, 1, .))) %>%
@@ -115,9 +137,9 @@ vars <- c(
   "edrerf",
   "edad",
   "ur",
-  "estratopri",
   "pais",
   "year",
+  "estratopri",
   "wave",
   "pais_nam",
   "pais_lab",
@@ -125,42 +147,54 @@ vars <- c(
 )
 
 
-vars_labels <- read.csv("variable_labels_shiny.csv")
-vars_labels$display_en <- paste0(vars_labels$category_short_en, ": ", vars_labels$question_short_en, 
-                                 " (", vars_labels$column_name, ")", sep = "")
+vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
 
+if (esp) {
+  vars_labels$display_es <- paste0(vars_labels$category_short_es, ": ", vars_labels$question_short_es, 
+                                   " (", vars_labels$column_name, ")", sep = "")
+} else {
+  vars_labels$display_en <- paste0(vars_labels$category_short_en, ": ", vars_labels$question_short_en, 
+                                   " (", vars_labels$column_name, ")", sep = "")
+}
 
 
 vars2 <- vars_labels$column_name
 vars3 <- c(vars2, vars)
 
-
+# verify all variables are present
 vars3 %in% names(gm)
 vars3[!vars3 %in% names(gm)]
 
 gmr <- gm[vars3]
 
-saveRDS(gmr, "gm_shiny_data.rds")
 
-# 
-# dstrata <- gmr %>%
-#   as_survey(strata = strata, weights = weight1500)
-# 
-# table(as_factor(dstrata$variables$pais))
-# 
-# 
-# saveRDS(dstrata, "gmrstrata.rds")
+saveRDS(gmr, paste0("gm_shiny_data_", ifelse(esp, "es", "en"), ".rds"))
 
-labs <- vars_labels$column_name
-names(labs) <- vars_labels$display_en
-labs[order(names(labs))]
 
-names(vars_labels$column_name) <- vars_labels$display_en
-vars_labels$labs2 <- labs
-
-vars_labels$question_en_comp <- paste0(vars_labels$question_en, vars_labels$responses_en_rec, sep = " ")
-
-saveRDS(labs, "labs.rds")
+if (esp) {
+  labs <- vars_labels$column_name
+  names(labs) <- vars_labels$display_es
+  labs[order(names(labs))]
+  
+  names(vars_labels$column_name) <- vars_labels$display_es
+  vars_labels$labs2 <- labs
+  
+  vars_labels$question_es_comp <- paste0(vars_labels$question_es, vars_labels$responses_es_rec, sep = " ")
+  
+  saveRDS(labs, "labs_es.rds")
+} else {
+  labs <- vars_labels$column_name
+  names(labs) <- vars_labels$display_en
+  labs[order(names(labs))]
+  
+  names(vars_labels$column_name) <- vars_labels$display_en
+  vars_labels$labs2 <- labs
+  
+  vars_labels$question_en_comp <- paste0(vars_labels$question_en, vars_labels$responses_en_rec, sep = " ")
+  
+  saveRDS(labs, "labs_en.rds")
+  
+}
 
 
 

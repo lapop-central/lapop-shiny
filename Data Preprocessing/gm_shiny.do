@@ -1,11 +1,14 @@
 use "C:\Users\plutowl\Box\LAPOP Shared\2_Projects\2023 AB\Core_Regional\Data Processing\GM\Grand Merge 2004-2023 LAPOP AmericasBarometer (v1.0s).dta", clear
 
-lab lang en
+*if creating Spanish version, make two changes:
+* 1) set labels to Spanish/English here 
+* 2) save dataset as gm_es or gm_en depending on language
+lab lang es
 
 ** Combine and recode a4 questions into four categories (economy, security, politics, other)
 recode a4n 7 8 = 77, gen(a4n_collap)
-lab def a4n_collap 1 "Economic" 2 "Security" 3 "Basic Services" 4 "Politics" 5 "Unemployment" 6 "Corruption" 77 "Other", modify
-lab val a4n_collap a4n_collap 
+*lab def a4n_collap 1 "Economic" 2 "Security" 3 "Basic Services" 4 "Politics" 5 "Unemployment" 6 "Corruption" 77 "Other", modify
+* lab val a4n_collap a4n_collap 
 
 #delimit ;
 cap recode a4
@@ -49,8 +52,8 @@ replace l1 = l1n if missing(l1)
 replace l1 = l1bn if missing(l1)
 replace l1 = l1b if missing(l1)
 
-lab def l1_en 1 "Left/liberal" 10 "Right/conservative", modify
-lab val l1 l1_en
+*lab def l1_en 1 "Left/liberal" 10 "Right/conservative", modify
+*lab val l1 l1_en
 
 ** reverse response label order for some variables (so that all go from low --> high)
 foreach  var of varlist aoj11 aoj12 cp13 cp8 exc7 env2b gi0n idio2 it1 jc10 jc13 jc15a jc16a m1 mil10a mil10e np1 pn4 pol1 q10a q10e q14 q5a q5b sd2new2 sd3new2 sd6new2 soct2 vb10 vb2 vb50 vic1ext w14a wf1 {
@@ -61,6 +64,6 @@ foreach  var of varlist aoj11 aoj12 cp13 cp8 exc7 env2b gi0n idio2 it1 jc10 jc13
 rename *_r2 * 
 
 ** IMPORTANT: save datasets outside of GitHub -- the files are too large for the repo
-save "C:\Users\plutowl\Desktop\gm_en.dta", replace
-*save "C:\Users\plutowl\Desktop\gm_es.dta", replace
+*save "C:\Users\plutowl\Desktop\gm_en.dta", replace
+save "C:\Users\plutowl\Desktop\gm_es.dta", replace
 
