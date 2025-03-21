@@ -82,7 +82,7 @@ ui <- fluidPage(
     
     # Sidebar panel for inputs ----
     sidebarPanel(
-      
+                       
       selectInput("variable", "Variable",
                   labs[order(names(labs))],
                   selected = "ing4"),
@@ -97,7 +97,7 @@ ui <- fluidPage(
                                "Panamá", "Paraguay", "Perú", "Uruguay"),
                   options = list(`actions-box` = TRUE,
                                  `select-all-text` = "Seleccionar todos",
-                                 `deselect-all-text` = "Deseleccionar todos"),
+                                  `deselect-all-text` = "Deseleccionar todos"),
                   multiple = TRUE), 
       
       #this fixes a formatting issue with checkboxGroupInput below
@@ -120,29 +120,29 @@ ui <- fluidPage(
       #this makes slider input only integers
       tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
       
-      
+
       
       pickerInput(inputId = "wave", 
                   label = "Rondas de Encuesta",
                   choices = c("2004" = "2004",
-                              "2006" = "2006",
-                              "2008" = "2008",
-                              "2010" = "2010",
-                              "2012" = "2012",
-                              "2014" = "2014",
-                              "2016/17" = "2016/17",
-                              "2018/19" = "2018/19",
-                              "2021" = "2021",
-                              "2023" = "2023"),
-                  selected = c("2006", "2008", "2010", "2012", "2014",
-                               "2016/17", "2018/19", "2021", "2023"),
+                                     "2006" = "2006",
+                                     "2008" = "2008",
+                                     "2010" = "2010",
+                                     "2012" = "2012",
+                                     "2014" = "2014",
+                                     "2016/17" = "2016/17",
+                                     "2018/19" = "2018/19",
+                                     "2021" = "2021",
+                                     "2023" = "2023"),
+                         selected = c("2006", "2008", "2010", "2012", "2014",
+                                      "2016/17", "2018/19", "2021", "2023"),
                   options = list(`actions-box` = TRUE,
                                  `select-all-text` = "Seleccionar todos",
                                  `deselect-all-text` = "Deseleccionar todos"),
                   # options = list
-                  multiple = TRUE),
+                         multiple = TRUE),
       
-      # show recode slider only for time series, cc, and breakdown (not hist)
+# show recode slider only for time series, cc, and breakdown (not hist)
       conditionalPanel(
         'input.tabs == "Series de Tiempo" | input.tabs == "Comparativa" | input.tabs == "Descomposición"',
         uiOutput("sliderUI"),
@@ -163,29 +163,29 @@ ui <- fluidPage(
                            selected = c("gendermc", "edad", "edre"),
                            inline = TRUE)
       ),
-      
+    
       actionButton("go", "Generar")
       
-      
+
     ),
     
     # Main panel for displaying outputs ----
     mainPanel(
-      
+
       # Output: Formatted text for caption ----
       h3(textOutput("caption")),
       h5(textOutput("wording")),
       h5(textOutput("response")),
       
       tabsetPanel(id = "tabs",
-                  tabPanel("Histograma", plotOutput("hist")),
-                  
-                  tabPanel("Series de Tiempo", plotOutput("ts")),
-                  
-                  tabPanel("Comparativa", plotOutput("cc")),
-                  
-                  tabPanel("Descomposición", plotOutput("mover"))
-      ),
+        tabPanel("Histograma", plotOutput("hist")),
+        
+        tabPanel("Series de Tiempo", plotOutput("ts")),
+        
+        tabPanel("Comparativa", plotOutput("cc")),
+        
+        tabPanel("Descomposición", plotOutput("mover"))
+        ),
       br(),
       fluidRow(column(12, "",
                       downloadButton(outputId = "downloadPlot", label = "Descargar Figura"),
@@ -205,7 +205,7 @@ server <- function(input, output, session) {
   })
   
   outcome <- reactive({
-    input$variable
+      input$variable
   })
   
   variable_sec <- reactive({
@@ -217,7 +217,7 @@ server <- function(input, output, session) {
   })
   
   sliderParams <- reactiveValues(valuex = c(1, 1))
-  
+
   #set default slider values - 5-7 for 1-7 variable, 2 for 1-2 variable, 3-4 for 1-4 variable, etc.
   observeEvent(input$variable, {
     if (max(as.numeric(dstrata[[formulaText()]]), na.rm=TRUE) == 7) {
@@ -245,13 +245,13 @@ server <- function(input, output, session) {
   })
   
   
-  
+
   dff <- eventReactive(input$go, ignoreNULL = FALSE, {
     dstrata %>%
       filter(as_factor(wave) %in% input$wave) %>%
       filter(pais_nam %in% input$pais)
   })  
-  
+
   cap <- renderText({
     vars_labels$question_short_es[which(vars_labels$column_name == formulaText())]
   })
@@ -275,27 +275,27 @@ server <- function(input, output, session) {
   output$response <- eventReactive(input$go, ignoreNULL = FALSE, {
     resp() 
   })
-  
-  
-  #hist 
-  # must break into data event, graph event, and renderPlot to get download buttons to work
-  histd <- eventReactive(input$go, ignoreNULL = FALSE, {
-    hist_df = Error(
-      dff() %>%
-        group_by(across(outcome())) %>%
-        summarise(n = n())  %>%
-        drop_na() %>%
-        rename(cat = 1) %>%
-        mutate(prop = prop.table(n) * 100,
-               proplabel = paste(round(prop), "%", sep = ""),
-               cat = str_wrap(as.character(haven::as_factor(cat)), width = 25)))
+
     
-    validate(
-      need(hist_df, "Error: no hay datos disponibles. Verifique que esta pregunta se haya realizado en esta combinación de país/año.")
-    )
-    return(hist_df)
-  })
+#hist 
+# must break into data event, graph event, and renderPlot to get download buttons to work
+histd <- eventReactive(input$go, ignoreNULL = FALSE, {
+  hist_df = Error(
+    dff() %>%
+      group_by(across(outcome())) %>%
+      summarise(n = n())  %>%
+      drop_na() %>%
+      rename(cat = 1) %>%
+      mutate(prop = prop.table(n) * 100,
+             proplabel = paste(round(prop), "%", sep = ""),
+             cat = str_wrap(as.character(haven::as_factor(cat)), width = 25)))
   
+  validate(
+    need(hist_df, "Error: no hay datos disponibles. Verifique que esta pregunta se haya realizado en esta combinación de país/año.")
+  )
+  return(hist_df)
+  })
+
   
   histg <- eventReactive(input$go, ignoreNULL = FALSE, {
     histg <- lapop_hist(histd(), 
@@ -303,11 +303,11 @@ server <- function(input, output, session) {
                         source_info = ", Barómetro de las Américas Data Playground")
     return(histg)
   })
-  
+
   output$hist <- renderPlot({
     return(histg())
   })
-  
+
   
   #ts
   tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
@@ -317,7 +317,7 @@ server <- function(input, output, session) {
         mutate(outcome_rec = case_when(
           is.na(!!sym(outcome())) ~ NA_real_,
           !!sym(outcome()) >= input$recode[1] &
-            !!sym(outcome()) <= input$recode[2] ~ 100,
+          !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(as.character(as_factor(wave))) %>%
         summarise_at(vars("outcome_rec"),
@@ -339,16 +339,16 @@ server <- function(input, output, session) {
                    ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                    label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
                    source_info = ", Barómetro de las Américas Data Playground",
-                   subtitle = "% en la categoría seleccionada")
+                       subtitle = "% en la categoría seleccionada")
     return(tsg)
   })
-  
-  
+
+
   output$ts <- renderPlot({
     return(tsg())
   })
-  
-  #cc 
+
+#cc 
   ccd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_cc = Error(
       dff() %>%
@@ -356,7 +356,7 @@ server <- function(input, output, session) {
         mutate(outcome_rec = case_when(
           is.na(!!sym(outcome())) ~ NA_real_,
           !!sym(outcome()) >= input$recode[1] &
-            !!sym(outcome()) <= input$recode[2] ~ 100,
+          !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(vallabel = pais_lab) %>%
         summarise_at(vars("outcome_rec"),
@@ -378,11 +378,11 @@ server <- function(input, output, session) {
                    source_info = ", Barómetro de las Américas Data Playground")
     return(ccg)
   })
-  
+
   output$cc <- renderPlot({
     return(ccg())
   })
-  
+
   # Use function for each demographic Descomposición variable
   secdf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if (input$variable_sec == "None") {
@@ -482,7 +482,7 @@ server <- function(input, output, session) {
     moverg <- lapop_mover(moverd(), 
                           subtitle = "% en la categoría seleccionada", 
                           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
-                                        ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
+                                            ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
                           source_info = ", Barómetro de las Américas Data Playground")
     return(moverg)
   })
@@ -491,7 +491,7 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
-  
+
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma", "hist.svg",
