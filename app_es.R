@@ -7,7 +7,6 @@ library(stringr)
 library(shinyWidgets)
 library(Hmisc)
 
-
 lapop_fonts()
 
 dstrata <- readRDS("gm_shiny_data_es.rds")

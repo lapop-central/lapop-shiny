@@ -2,17 +2,16 @@ library(dplyr)
 library(haven)
 library(srvyr)
 
-#if creating spanish version, set to true
+rm(list=ls())
+
+# If creating spanish version, set to true
 esp <- TRUE
 
-setwd("C:/Users/plutowl/Documents/GitHub/lapop-shiny/Data Preprocessing")
-
-#read in gm data created from Stata do file
-# adjust your filepath here
-# path <- "C:/Users/plutowl/Desktop/"
+# Read in RAW grand merge (gm) data created from Stata do file
+path <- "C:/Users/rob/Box/Rob LAPOP/data/" # adjust your filepath here
 gm <- haven::read_dta(paste0(path, "gm_", ifelse(esp, "es", "en"), ".dta"))
 
-pais_lab <- read.csv("pais_lab.csv")
+pais_lab <- read.csv("Data Preprocessing/pais_lab.csv")
 if (esp) {
   pais_lab$pais_nam <- pais_lab$pais_nam_es
 }
@@ -195,6 +194,3 @@ if (esp) {
   saveRDS(labs, "labs_en.rds")
   
 }
-
-
-

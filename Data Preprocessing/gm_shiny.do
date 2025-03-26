@@ -1,4 +1,5 @@
-use "C:\Users\plutowl\Box\LAPOP Shared\2_Projects\2023 AB\Core_Regional\Data Processing\GM\Grand Merge 2004-2023 LAPOP AmericasBarometer (v1.0s).dta", clear
+* CHANGE IT TO YOUR USER PATH
+use "C:\Users\rob\Box\LAPOP Shared\2_Projects\2023 AB\Core_Regional\Data Processing\GM\Grand Merge 2004-2023 LAPOP AmericasBarometer (v1.1s).dta", clear
 
 *if creating Spanish version, make two changes:
 * 1) set labels to Spanish/English here 
@@ -64,6 +65,6 @@ foreach  var of varlist aoj11 aoj12 cp13 cp8 exc7 env2b gi0n idio2 it1 jc10 jc13
 rename *_r2 * 
 
 ** IMPORTANT: save datasets outside of GitHub -- the files are too large for the repo
-*save "C:\Users\plutowl\Desktop\gm_en.dta", replace
-save "C:\Users\plutowl\Desktop\gm_es.dta", replace
+*save "C:\Users\rob\Box\Rob LAPOP\data\gm_en.dta", replace
+save "C:\Users\rob\Box\Rob LAPOP\data\gm_es.dta", replace
 
