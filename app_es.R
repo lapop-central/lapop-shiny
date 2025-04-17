@@ -75,7 +75,7 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
 
 ui <- fluidPage(
   
-  titlePanel("El Barómetro de las Américas Data Playground"),
+  titlePanel("Data Playground del Barómetro de las Américas"),
   
   sidebarLayout(
     
@@ -158,7 +158,7 @@ ui <- fluidPage(
                              "Edad" = "edad",
                              "Riqueza" = "wealth",
                              "Educación" = "edre",
-                             "Urbana/Rural" = "ur"),
+                             "Urbano/Rural" = "ur"),
                            selected = c("gendermc", "edad", "edre"),
                            inline = TRUE)
       ),
