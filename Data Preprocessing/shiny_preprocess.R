@@ -5,9 +5,12 @@ library(srvyr)
 rm(list=ls())
 
 # If creating spanish version, set to true
+# # -----------------------------------------------------------------------
 esp <- TRUE
+#esp <- FALSE
 
 # Read in RAW grand merge (gm) data created from Stata do file
+# # -----------------------------------------------------------------------
 path <- "C:/Users/rob/Box/Rob LAPOP/data/" # adjust your filepath here
 gm <- haven::read_dta(paste0(path, "gm_", ifelse(esp, "es", "en"), ".dta"))
 
@@ -20,14 +23,16 @@ gm <- merge(gm, pais_lab, by.x = "pais", by.y = "pais_num")
 expss::add_val_lab(gm$pais) = expss::num_lab("24 Guyana")
 
 
-#gender - strictly men vs. women, only self-identification in 2021 and 2023
+# GENDER - -----------------------------------------------------------------
+# strictly men vs. women, only self-identification in 2021 and 2023
 gm$genderm <- gm$sex
 gm$genderm <- ifelse(is.na(gm$genderm) &  gm$q1tc_r < 3, gm$q1tc_r, gm$genderm)
 gm$genderm <- ifelse(is.na(gm$genderm) &  gm$q1tb < 3, gm$q1tb, gm$genderm)
 gm$genderm <- ifelse(is.na(gm$genderm) &  gm$usq1tc < 3, gm$usq1tc, gm$genderm)
-gm$gendermc <- ifelse(gm$genderm == 1, ifelse(esp, "Hombres", "Men"), 
-                      ifelse(esp, "Mujeres", "Women"))
+gm$gendermc <- ifelse(gm$genderm == 1, ifelse(esp, "Hombre", "Men"), 
+                      ifelse(esp, "Mujer", "Women"))
 
+# EDUCATION ---------------------------------------------------------------
 gm$edrer <- NA
 gm$edrer <- ifelse(gm$edre < 3, 1,
                        ifelse(gm$edre <= 4, 2,
@@ -96,19 +101,30 @@ gm$edrr2 <- gm$edrr - 1
 gm$edrer <- ifelse(is.na(gm$edrer), gm$edrr2, gm$edrer)
 gm$edrer <- ifelse(gm$edrer == 0, 1, gm$edrer)
 
+labels_edrerf <- if (esp) {
+  c("Ninguna/primaria", "Secundaria", "Superior")
+} else {
+  c("None/Primary", "Secondary", "Superior")
+}
+
+
 gm$edrerf <- factor(gm$edrer,
                        levels = c(1, 2, 3),
-                       labels = ifelse(esp,
-                                       c("Ninguna/primaria", "Secundaria", "Superior"), 
-                                       c("None/Primary", "Secondary", "Superior")))
+                       labels = labels_edrerf)
 
+# WEALTH ------------------------------------------------------------------
+
+labels_wealthf <- if (esp) {
+  c("Baja", "2", "3", "4", "Alta")
+} else {
+  c("Low", "2", "3", "4", "High")
+}
 gm$wealth[gm$wealth == 6] <- NA
 gm$wealthf <- factor(gm$wealth,
                         levels = c(1, 2, 3, 4, 5),
-                        labels = ifelse(esp,
-                                        c("Baja", "2", "3", "4", "Alta"),
-                                        c("Low", "2", "3", "4", "High")))
+                        labels = labels_wealthf)
 
+# IDEO --------------------------------------------------------------------
 gm$l1 <- ifelse(is.na(gm$l1), gm$ideology, gm$l1)
 gm$l1 <- ifelse(is.na(gm$l1), gm$l1n, gm$l1)
 gm$l1 <- ifelse(is.na(gm$l1), gm$l1bn, gm$l1)
@@ -119,13 +135,15 @@ if (esp) {
   gm$l1 = labelled(gm$l1,
                    c("Izquierda/liberal" = 1, "Derecha/conservador" = 10),
                    label = "Ideología")
-  
 } else {
   gm$l1 = labelled(gm$l1,
                    c("Left/liberal" = 1, "Right/conservative" = 10),
                label = "Ideology")
 }
 
+
+# DATA FOR PLAYGROUND
+# # -----------------------------------------------------------------------
 gm <- gm %>%
   mutate(across(ur, ~ if_else(is.na(ur) & ur1new == 1, 1, .))) %>%
   mutate(across(ur, ~ if_else(is.na(ur) & ur1new <= 4, 2, .)))
@@ -145,7 +163,6 @@ vars <- c(
   "weight1500"
 )
 
-
 vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
 
 if (esp) {
@@ -155,7 +172,6 @@ if (esp) {
   vars_labels$display_en <- paste0(vars_labels$category_short_en, ": ", vars_labels$question_short_en, 
                                    " (", vars_labels$column_name, ")", sep = "")
 }
-
 
 vars2 <- vars_labels$column_name
 vars3 <- c(vars2, vars)
@@ -191,6 +207,6 @@ if (esp) {
   
   vars_labels$question_en_comp <- paste0(vars_labels$question_en, vars_labels$responses_en_rec, sep = " ")
   
-  saveRDS(labs, "labs_en.rds")
+  #saveRDS(labs, "labs_en.rds")
   
 }

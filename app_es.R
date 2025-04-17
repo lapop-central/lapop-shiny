@@ -122,7 +122,7 @@ ui <- fluidPage(
       
       
       pickerInput(inputId = "wave", 
-                  label = "Rondas de Encuesta",
+                  label = "Ronda de encuesta",
                   choices = c("2004" = "2004",
                               "2006" = "2006",
                               "2008" = "2008",
@@ -143,13 +143,13 @@ ui <- fluidPage(
       
       # show recode slider only for time series, cc, and breakdown (not hist)
       conditionalPanel(
-        'input.tabs == "Series de Tiempo" | input.tabs == "Comparativa" | input.tabs == "Descomposición"',
+        'input.tabs == "Serie de Tiempo" | input.tabs == "Comparativo" | input.tabs == "Desglose"',
         uiOutput("sliderUI"),
       ),
       
       
       conditionalPanel(
-        'input.tabs == "Descomposición"',
+        'input.tabs == "Desglose"',
         selectInput("variable_sec", "Variable Secundaria",
                     c("Ninguna" = "None",
                       labs[order(names(labs))])),
@@ -179,16 +179,16 @@ ui <- fluidPage(
       tabsetPanel(id = "tabs",
                   tabPanel("Histograma", plotOutput("hist")),
                   
-                  tabPanel("Series de Tiempo", plotOutput("ts")),
+                  tabPanel("Serie de Tiempo", plotOutput("ts")),
                   
-                  tabPanel("Comparativa", plotOutput("cc")),
+                  tabPanel("Comparativo", plotOutput("cc")),
                   
-                  tabPanel("Descomposición", plotOutput("mover"))
+                  tabPanel("Desglose", plotOutput("mover"))
       ),
       br(),
       fluidRow(column(12, "",
-                      downloadButton(outputId = "downloadPlot", label = "Descargar Figura"),
-                      downloadButton(outputId = "downloadTable", label = "Descargar Tabla")))
+                      downloadButton(outputId = "downloadPlot", label = "Descargar gráfico"),
+                      downloadButton(outputId = "downloadTable", label = "Descargar tabla")))
     )
   )
 )
@@ -299,7 +299,7 @@ server <- function(input, output, session) {
   histg <- eventReactive(input$go, ignoreNULL = FALSE, {
     histg <- lapop_hist(histd(), 
                         ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                        source_info = ", Barómetro de las Américas Data Playground")
+                        source_info = ", Data Playground del Barómetro de las Américas")
     return(histg)
   })
   
@@ -382,7 +382,7 @@ server <- function(input, output, session) {
     return(ccg())
   })
   
-  # Use function for each demographic Descomposición variable
+  # Use function for each demographic Desglose variable
   secdf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if (input$variable_sec == "None") {
       NULL
@@ -494,13 +494,13 @@ server <- function(input, output, session) {
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma", "hist.svg",
-             ifelse(input$tabs == "Series de Tiempo", "ts.svg",
-                    ifelse(input$tabs == "Comparativa", "cc.svg", "mover.svg")))
+             ifelse(input$tabs == "Serie de Tiempo", "ts.svg",
+                    ifelse(input$tabs == "Comparativo", "cc.svg", "mover.svg")))
     },
     content = function(file) {
       if(input$tabs == "Histograma") {
         lapop_save(histg(), file)
-      } else if (input$tabs == "Series de Tiempo") {
+      } else if (input$tabs == "Serie de Tiempo") {
         lapop_save(tsg(), file)
       } else if (input$tabs == "Cross Country") {
         lapop_save(ccg(), file)
@@ -514,13 +514,13 @@ server <- function(input, output, session) {
   output$downloadTable <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma", "hist.csv",
-             ifelse(input$tabs == "Series de Tiempo", "ts.csv",
-                    ifelse(input$tabs == "Comparativa", "cc.csv", "mover.csv")))
+             ifelse(input$tabs == "Serie de Tiempo", "ts.csv",
+                    ifelse(input$tabs == "Comparativo", "cc.csv", "mover.csv")))
     },
     content = function(file) {
       if(input$tabs == "Histograma") {
         write.csv(histd(), file)
-      } else if (input$tabs == "Series de Tiempo") {
+      } else if (input$tabs == "Serie de Tiempo") {
         write.csv(tsd(), file)
       } else if (input$tabs == "Cross Country") {
         write.csv(ccd(), file)

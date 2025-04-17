@@ -6,7 +6,6 @@ library(stringr)
 library(shinyWidgets)
 library(Hmisc)
 
-
 lapop_fonts()
 
 dstrata <- readRDS("gm_shiny_data.rds")
@@ -83,7 +82,8 @@ ui <- fluidPage(
     
     # Sidebar panel for inputs ----
     sidebarPanel(
-                       
+      width = 3,  # Reduce width (default is 4)
+      
       selectInput("variable", "Variable",
                   labs[order(names(labs))],
                   selected = "ing4"),
@@ -169,7 +169,7 @@ ui <- fluidPage(
     
     # Main panel for displaying outputs ----
     mainPanel(
-
+      #width = 8,  # Adjust accordingly (default is 8)
       # Output: Formatted text for caption ----
       h3(textOutput("caption")),
       h5(textOutput("wording")),
@@ -191,9 +191,6 @@ ui <- fluidPage(
     )
   )
 )
-
-
-
 
 # Define server logic to plot various variables ----
 server <- function(input, output, session) {
