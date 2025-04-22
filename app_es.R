@@ -75,7 +75,7 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
 
 ui <- fluidPage(
   
-  titlePanel("Data Playground del Barómetro de las Américas"),
+  titlePanel(""), # Leave it Empty
   
   sidebarLayout(
     
