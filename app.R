@@ -83,7 +83,13 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label,
 # Creating User Interface
 ui <- fluidPage(
 
+<<<<<<< Updated upstream
   titlePanel("AmericasBarometer Data Playground"),
+=======
+  
+  
+  titlePanel(""), # Leave it Empty
+>>>>>>> Stashed changes
   
   sidebarLayout(
     
