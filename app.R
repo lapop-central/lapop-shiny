@@ -73,10 +73,8 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
 }
 
 ui <- fluidPage(
-
   
-  
-  titlePanel("AmericasBarometer Data Playground"),
+  titlePanel(""), # Leave it Empty
   
   sidebarLayout(
     
@@ -164,7 +162,6 @@ ui <- fluidPage(
     
       actionButton("go", "Generate")
       
-
     ),
     
     # Main panel for displaying outputs ----
@@ -270,8 +267,23 @@ server <- function(input, output, session) {
   output$response <- eventReactive(input$go, ignoreNULL = FALSE, {
     resp() 
   })
-
+  
+  
+ # SOURCE INFO WITH PAIS and WAVE
+  source_info_text <- reactive({
+    # Get country abbreviations that match selected country names
+    pais_abbr <- dstrata %>%
+      filter(pais_nam %in% input$pais) %>%
+      distinct(pais_nam, pais_lab) %>%
+      arrange(match(pais_nam, input$pais)) %>%  # preserve input order
+      pull(pais_lab)
     
+    pais_display <- paste(pais_abbr, collapse = ", ")
+    wave_display <- paste(input$wave, collapse = ", ")
+    
+    paste0(", AmericasBarometer Data Playground\n(Country: ", pais_display, "; Year: ", wave_display, ")")
+  })
+  
 #hist 
 # must break into data event, graph event, and renderPlot to get download buttons to work
 histd <- eventReactive(input$go, ignoreNULL = FALSE, {
@@ -295,7 +307,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   histg <- eventReactive(input$go, ignoreNULL = FALSE, {
     histg <- lapop_hist(histd(), 
                         ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                        source_info = ", AmericasBarometer Data Playground")
+                        source_info = source_info_text())
     return(histg)
   })
 
@@ -333,7 +345,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     tsg = lapop_ts(tsd(), 
                    ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                    label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                   source_info = ", AmericasBarometer Data Playground",
+                   source_info = source_info_text(),
                        subtitle = "% in selected category")
     return(tsg)
   })
@@ -370,7 +382,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     ccg = lapop_cc(ccd(), sort = "hi-lo", 
                    subtitle = "% in selected category",
                    ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                   source_info = ", AmericasBarometer Data Playground")
+                   source_info = source_info_text())
     return(ccg)
   })
 
@@ -388,7 +400,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
         outcome_var = outcome(),
         recode_range = input$recode,
         group_var = input$variable_sec,
-        var_label = str_wrap(variable_sec_lab(), width = 25)
+        var_label = str_wrap(variable_sec_lab(), width = 15)
       )
     }
   })
@@ -478,7 +490,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
                           subtitle = "% in selected category", 
                           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                                             ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-                          source_info = ", AmericasBarometer Data Playground")
+                          source_info = source_info_text())
     return(moverg)
   })
   
