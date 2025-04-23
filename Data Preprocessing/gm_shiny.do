@@ -56,6 +56,32 @@ replace l1 = l1b if missing(l1)
 *lab def l1_en 1 "Left/liberal" 10 "Right/conservative", modify
 *lab val l1 l1_en
 
+** relabel j-series due to width in breakdown plot (ENGLISH)
+lab def jc10r 1 "Yes" 2 "No"
+lab val jc10 jc10r
+
+lab def jc13r 1 "Yes" 2 "No"
+lab val jc13 jc13r
+
+lab def jc15ar 1 "Yes" 2 "No"
+lab val jc15a jc15ar
+
+lab def jc16ar 1 "Yes" 2 "No"
+lab val jc16a jc16ar
+
+** relabel j-series due to width in breakdown plot (SPANISH)
+lab def jc10r 1 "Sí" 2 "No"
+lab val jc10 jc10r
+
+lab def jc13r 1 "Sí" 2 "No"
+lab val jc13 jc13r
+
+lab def jc15ar 1 "Sí" 2 "No"
+lab val jc15a jc15ar
+
+lab def jc16ar 1 "Sí" 2 "No"
+lab val jc16a jc16ar
+
 ** reverse response label order for some variables (so that all go from low --> high)
 foreach  var of varlist aoj11 aoj12 cp13 cp8 exc7 env2b gi0n idio2 it1 jc10 jc13 jc15a jc16a m1 mil10a mil10e np1 pn4 pol1 q10a q10e q14 q5a q5b sd2new2 sd3new2 sd6new2 soct2 vb10 vb2 vb50 vic1ext w14a wf1 {
 	lpr_resc `var', onlyrev labv sufv(_r2)

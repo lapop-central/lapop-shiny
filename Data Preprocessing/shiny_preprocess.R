@@ -4,17 +4,17 @@ library(srvyr)
 
 rm(list=ls())
 
-# If creating spanish version, set to true
+# If creating Spanish version, set to true
 # # -----------------------------------------------------------------------
-esp <- TRUE
-#esp <- FALSE
+#esp <- TRUE
+esp <- FALSE
 
 # Read in RAW grand merge (gm) data created from Stata do file
 # # -----------------------------------------------------------------------
 path <- "C:/Users/rob/Box/Rob LAPOP/data/" # adjust your filepath here
 gm <- haven::read_dta(paste0(path, "gm_", ifelse(esp, "es", "en"), ".dta"))
 
-pais_lab <- read.csv("Data Preprocessing/pais_lab.csv")
+pais_lab <- read.csv("pais_lab.csv")
 if (esp) {
   pais_lab$pais_nam <- pais_lab$pais_nam_es
 }
@@ -196,7 +196,8 @@ if (esp) {
   
   vars_labels$question_es_comp <- paste0(vars_labels$question_es, vars_labels$responses_es_rec, sep = " ")
   
-  saveRDS(labs, "labs_es.rds")
+  saveRDS(labs, "labs_es.rds"); print("Spanish data saved")
+  
 } else {
   labs <- vars_labels$column_name
   names(labs) <- vars_labels$display_en
@@ -207,6 +208,7 @@ if (esp) {
   
   vars_labels$question_en_comp <- paste0(vars_labels$question_en, vars_labels$responses_en_rec, sep = " ")
   
-  #saveRDS(labs, "labs_en.rds")
+  saveRDS(labs, "labs_en.rds"); print("English data saved")
   
 }
+
