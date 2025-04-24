@@ -573,7 +573,7 @@ server <- function(input, output, session) {
         
         hist_to_save <- lapop_hist(histd(),
                                    main_title = title_text,
-                                   subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
+                                   subtitle = "% en la categoría seleccionada ",
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
                                    source_info = source_info_both())
         
