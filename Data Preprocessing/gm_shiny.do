@@ -1,10 +1,14 @@
 * CHANGE IT TO YOUR USER PATH
 use "C:\Users\rob\Box\LAPOP Shared\2_Projects\2023 AB\Core_Regional\Data Processing\GM\Grand Merge 2004-2023 LAPOP AmericasBarometer (v1.1s).dta", clear
 
-*if creating Spanish version, make two changes:
+*** if creating Spanish version, make two changes:
+
 * 1) set labels to Spanish/English here 
-* 2) save dataset as gm_es or gm_en depending on language
+lab lang en
 lab lang es
+
+* 2) save dataset as gm_es or gm_en depending on language
+
 
 ** Combine and recode a4 questions into four categories (economy, security, politics, other)
 recode a4n 7 8 = 77, gen(a4n_collap)
@@ -69,6 +73,10 @@ lab val jc15a jc15ar
 lab def jc16ar 1 "Yes" 2 "No"
 lab val jc16a jc16ar
 
+** vb20 too long (ENGLISH)
+lab def vb20r 1  "Wouldnʼt vote" 2  "Incumbent candidate/party" 3  "Opposition candidate/party" 4  "Intentional blank/canceled vote"
+lab val vb20 vb20r
+
 ** relabel j-series due to width in breakdown plot (SPANISH)
 lab def jc10r 1 "Sí" 2 "No"
 lab val jc10 jc10r
@@ -82,6 +90,10 @@ lab val jc15a jc15ar
 lab def jc16ar 1 "Sí" 2 "No"
 lab val jc16a jc16ar
 
+* vb20 too long (SPANISH)
+lab def vb20r 1  "No votaría" 2  "Candidato/partido actual" 3  "Candidato/partido opositor" 4  "Voto en blanco/anulado"
+lab val vb20 vb20r
+
 ** reverse response label order for some variables (so that all go from low --> high)
 foreach  var of varlist aoj11 aoj12 cp13 cp8 exc7 env2b gi0n idio2 it1 jc10 jc13 jc15a jc16a m1 mil10a mil10e np1 pn4 pol1 q10a q10e q14 q5a q5b sd2new2 sd3new2 sd6new2 soct2 vb10 vb2 vb50 vic1ext w14a wf1 {
 	lpr_resc `var', onlyrev labv sufv(_r2)
@@ -92,5 +104,5 @@ rename *_r2 *
 
 ** IMPORTANT: save datasets outside of GitHub -- the files are too large for the repo
 *save "C:\Users\rob\Box\Rob LAPOP\data\gm_en.dta", replace
-save "C:\Users\rob\Box\Rob LAPOP\data\gm_es.dta", replace
+*save "C:\Users\rob\Box\Rob LAPOP\data\gm_es.dta", replace
 

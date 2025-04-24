@@ -275,6 +275,53 @@ server <- function(input, output, session) {
     resp() 
   })
   
+  # SOURCE INFO WITH PAIS and WAVE
+  source_info_both <- reactive({
+    # Get country abbreviations that match selected country names
+    pais_abbr <- dstrata %>%
+      filter(pais_nam %in% input$pais) %>%
+      distinct(pais_nam, pais_lab) %>%
+      arrange(match(pais_nam, input$pais)) %>%  # preserve input order
+      pull(pais_lab)
+    
+    pais_display <- paste(pais_abbr, collapse = ", ")
+    wave_display <- paste(input$wave, collapse = ", ")
+    
+    if (head(pais_display) > 5) {
+      paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display, ".\nAños incluidos: ", wave_display, ".")
+      
+    } else {
+      paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display, ". Años incluidos: ", wave_display, ".")
+    }
+  })
+  
+  source_info_pais <- reactive({
+    # Get country abbreviations that match selected country names
+    pais_abbr <- dstrata %>%
+      filter(pais_nam %in% input$pais) %>%
+      distinct(pais_nam, pais_lab) %>%
+      arrange(match(pais_nam, input$pais)) %>%  # preserve input order
+      pull(pais_lab)
+    
+    pais_display <- paste(pais_abbr, collapse = ", ")
+    wave_display <- paste(input$wave, collapse = ", ")
+    
+    paste0(", Barómetro de las Américas Data Playground.\nPaíses incluidos: ", pais_display, "." )
+  })
+  
+  source_info_wave <- reactive({
+    # Get country abbreviations that match selected country names
+    pais_abbr <- dstrata %>%
+      filter(pais_nam %in% input$pais) %>%
+      distinct(pais_nam, pais_lab) %>%
+      arrange(match(pais_nam, input$pais)) %>%  # preserve input order
+      pull(pais_lab)
+    
+    pais_display <- paste(pais_abbr, collapse = ", ")
+    wave_display <- paste(input$wave, collapse = ", ")
+    
+    paste0(", Barómetro de las Américas Data Playground.\nAños incluidos: ", wave_display, ".")
+  })
   
   #hist 
   # must break into data event, graph event, and renderPlot to get download buttons to work
@@ -299,7 +346,8 @@ server <- function(input, output, session) {
   histg <- eventReactive(input$go, ignoreNULL = FALSE, {
     histg <- lapop_hist(histd(), 
                         ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                        source_info = ", Data Playground del Barómetro de las Américas")
+                        lang = "es",
+                        source_info = source_info_both())
     return(histg)
   })
   
@@ -337,7 +385,8 @@ server <- function(input, output, session) {
     tsg = lapop_ts(tsd(), 
                    ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                    label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                   source_info = ", Barómetro de las Américas Data Playground",
+                   source_info = source_info_pais(),
+                   lang = "es",
                    subtitle = "% en la categoría seleccionada")
     return(tsg)
   })
@@ -374,7 +423,8 @@ server <- function(input, output, session) {
     ccg = lapop_cc(ccd(), sort = "hi-lo", 
                    subtitle = "% en la categoría seleccionada",
                    ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                   source_info = ", Barómetro de las Américas Data Playground")
+                   lang = "es",
+                   source_info = source_info_wave())
     return(ccg)
   })
   
@@ -385,6 +435,10 @@ server <- function(input, output, session) {
   # Use function for each demographic Desglose variable
   secdf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if (input$variable_sec == "None") {
+      NULL
+    }  else if (variable_sec() == outcome()) {
+      showNotification("No se puede desglosar la variable resultado por sí misma", 
+                       type = "error")
       NULL
     } else {
       process_data(
@@ -467,7 +521,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # Combine =demographic data frames into one df
+  # Combine demographic data frames into one df
   moverd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_mover <- Error(rbind(secdf(), genderdf(), edaddf(), wealthdf(), eddf(), urdf()))
     validate(
@@ -482,7 +536,8 @@ server <- function(input, output, session) {
                           subtitle = "% en la categoría seleccionada", 
                           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-                          source_info = ", Barómetro de las Américas Data Playground")
+                          lang = "es",
+                          source_info = source_info_both())
     return(moverg)
   })
   
@@ -490,7 +545,7 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
-  
+  # DOWNLOAD SECTION
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma", "hist.svg",

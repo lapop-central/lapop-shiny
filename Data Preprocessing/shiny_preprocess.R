@@ -14,12 +14,15 @@ esp <- FALSE
 path <- "C:/Users/rob/Box/Rob LAPOP/data/" # adjust your filepath here
 gm <- haven::read_dta(paste0(path, "gm_", ifelse(esp, "es", "en"), ".dta"))
 
-pais_lab <- read.csv("pais_lab.csv")
+pais_lab <- read.csv("Data Preprocessing/pais_lab.csv")
+
 if (esp) {
   pais_lab$pais_nam <- pais_lab$pais_nam_es
 }
+
 gm <- merge(gm, pais_lab, by.x = "pais", by.y = "pais_num")
 
+# Fix Guyana
 expss::add_val_lab(gm$pais) = expss::num_lab("24 Guyana")
 
 
