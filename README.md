@@ -1,2 +1,2 @@
-Data Playground of the AmericasBarometer
-AUthors: Luke Plutowvski and Robert Vidigal
+Spanish Translation of AmericasBarometer Data Playground
+Authors: Luke Plutowski and Robert Vidigal
