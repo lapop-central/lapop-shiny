@@ -552,11 +552,10 @@ server <- function(input, output, session) {
     content = function(file) {
       if(input$tabs == "Histogram") {
         title_text <- isolate(cap())
-        subtitle_text <- slider_values()
         
         hist_to_save <- lapop_hist(histd(),
                                    main_title = title_text,
-                                   subtitle = paste0("% in selected category ", subtitle_text),
+                                   subtitle = "% in selected category ",
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
                                    source_info = source_info_both())
         
