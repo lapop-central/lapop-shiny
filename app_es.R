@@ -275,6 +275,19 @@ server <- function(input, output, session) {
     resp() 
   })
   
+  slider_values <- renderText({
+    if(input$recode[1] == input$recode[2]) {
+      paste0("(valor seleccionado: ", unique(input$recode), ")")
+    } else {
+      paste0("(rango seleccionado: ", paste(input$recode, collapse = " to "), ")")
+    }
+  })
+  
+  output$selected_values <- eventReactive(input$go, ignoreNULL = FALSE, {
+    slider_values()
+  })
+  
+  
   # SOURCE INFO WITH PAIS and WAVE
   source_info_both <- reactive({
     # Get country abbreviations that match selected country names
@@ -288,10 +301,10 @@ server <- function(input, output, session) {
     wave_display <- paste(input$wave, collapse = ", ")
     
     if (head(pais_display) > 5) {
-      paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display, ".\nAños incluidos: ", wave_display, ".")
+      paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display, ".\nRondas incluidas: ", wave_display)
       
     } else {
-      paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display, ". Años incluidos: ", wave_display, ".")
+      paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display, ". Rondas incluidas: ", wave_display)
     }
   })
   
@@ -306,7 +319,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", Barómetro de las Américas Data Playground.\nPaíses incluidos: ", pais_display, "." )
+    paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display)
   })
   
   source_info_wave <- reactive({
@@ -320,7 +333,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", Barómetro de las Américas Data Playground.\nAños incluidos: ", wave_display, ".")
+    paste0(", Barómetro de las Américas Data Playground\nRondas incluidas: ", wave_display)
   })
   
   #hist 
@@ -548,16 +561,17 @@ server <- function(input, output, session) {
   # DOWNLOAD SECTION
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histograma", "hist.svg",
-             ifelse(input$tabs == "Serie de Tiempo", "ts.svg",
-                    ifelse(input$tabs == "Comparativo", "cc.svg", "mover.svg")))
+      ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".svg"),
+             ifelse(input$tabs == "Serie de Tiempo",  paste0("ts_", outcome(),".svg"),
+                    ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
     },
+    
     content = function(file) {
       if(input$tabs == "Histograma") {
         lapop_save(histg(), file)
       } else if (input$tabs == "Serie de Tiempo") {
         lapop_save(tsg(), file)
-      } else if (input$tabs == "Cross Country") {
+      } else if (input$tabs == "Comparativo") {
         lapop_save(ccg(), file)
       } else {
         lapop_save(moverg(), file)
@@ -568,16 +582,16 @@ server <- function(input, output, session) {
   
   output$downloadTable <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histograma", "hist.csv",
-             ifelse(input$tabs == "Serie de Tiempo", "ts.csv",
-                    ifelse(input$tabs == "Comparativo", "cc.csv", "mover.csv")))
+      ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".svg"),
+             ifelse(input$tabs == "Serie de Tiempo",  paste0("ts_", outcome(),".svg"),
+                    ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
     },
     content = function(file) {
       if(input$tabs == "Histograma") {
         write.csv(histd(), file)
       } else if (input$tabs == "Serie de Tiempo") {
         write.csv(tsd(), file)
-      } else if (input$tabs == "Cross Country") {
+      } else if (input$tabs == "Comparativo") {
         write.csv(ccd(), file)
       } else {
         write.csv(moverd(), file)
