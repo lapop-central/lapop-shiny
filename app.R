@@ -8,8 +8,8 @@ library(Hmisc)
 
 lapop_fonts()
 
-dstrata <- readRDS("gm_shiny_data.rds")
-labs <- readRDS("labs.rds")
+dstrata <- readRDS("gm_shiny_data_en.rds")
+labs <- readRDS("labs_en.rds")
 vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
 
 Error<-function(x){
@@ -118,29 +118,29 @@ ui <- fluidPage(
       #this makes slider input only integers
       tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
       
-
+      
       
       pickerInput(inputId = "wave", 
                   label = "Survey Rounds",
                   choices = c("2004" = "2004",
-                                     "2006" = "2006",
-                                     "2008" = "2008",
-                                     "2010" = "2010",
-                                     "2012" = "2012",
-                                     "2014" = "2014",
-                                     "2016/17" = "2016/17",
-                                     "2018/19" = "2018/19",
-                                     "2021" = "2021",
-                                     "2023" = "2023"),
-                         selected = c("2006", "2008", "2010", "2012", "2014",
-                                      "2016/17", "2018/19", "2021", "2023"),
+                              "2006" = "2006",
+                              "2008" = "2008",
+                              "2010" = "2010",
+                              "2012" = "2012",
+                              "2014" = "2014",
+                              "2016/17" = "2016/17",
+                              "2018/19" = "2018/19",
+                              "2021" = "2021",
+                              "2023" = "2023"),
+                  selected = c("2006", "2008", "2010", "2012", "2014",
+                               "2016/17", "2018/19", "2021", "2023"),
                   options = list(`actions-box` = TRUE),
                   # options = list
-                         multiple = TRUE), 
+                  multiple = TRUE), 
       
-# show recode slider only for time series, cc, and breakdown (not hist)
+      # show recode slider only for time series, cc, and breakdown (not hist)
       conditionalPanel(
-        'input.tabs == "Time Series" | input.tabs == "Cross-Country" | input.tabs == "Breakdown"',
+        'input.tabs == "Time Series" | input.tabs == "Cross Country" | input.tabs == "Breakdown"',
         uiOutput("sliderUI"),
       ),
       
@@ -159,7 +159,7 @@ ui <- fluidPage(
                            selected = c("gendermc", "edad", "edre"),
                            inline = TRUE)
       ),
-    
+      
       actionButton("go", "Generate")
       
     ),
@@ -173,14 +173,14 @@ ui <- fluidPage(
       h5(textOutput("response")),
       
       tabsetPanel(id = "tabs",
-        tabPanel("Histogram", plotOutput("hist")),
-        
-        tabPanel("Time Series", plotOutput("ts")),
-        
-        tabPanel("Cross-Country", plotOutput("cc")),
-        
-        tabPanel("Breakdown", plotOutput("mover"))
-        ),
+                  tabPanel("Histogram", plotOutput("hist")),
+                  
+                  tabPanel("Time Series", plotOutput("ts")),
+                  
+                  tabPanel("Cross Country", plotOutput("cc")),
+                  
+                  tabPanel("Breakdown", plotOutput("mover"))
+      ),
       br(),
       fluidRow(column(12, "",
                       downloadButton(outputId = "downloadPlot", label = "Download Figure"),
@@ -197,7 +197,7 @@ server <- function(input, output, session) {
   })
   
   outcome <- reactive({
-      input$variable
+    input$variable
   })
   
   variable_sec <- reactive({
@@ -209,7 +209,7 @@ server <- function(input, output, session) {
   })
   
   sliderParams <- reactiveValues(valuex = c(1, 1))
-
+  
   #set default slider values - 5-7 for 1-7 variable, 2 for 1-2 variable, 3-4 for 1-4 variable, etc.
   observeEvent(input$variable, {
     if (max(as.numeric(dstrata[[formulaText()]]), na.rm=TRUE) == 7) {
@@ -237,13 +237,13 @@ server <- function(input, output, session) {
   })
   
   
-
+  
   dff <- eventReactive(input$go, ignoreNULL = FALSE, {
     dstrata %>%
       filter(as_factor(wave) %in% input$wave) %>%
       filter(pais_nam %in% input$pais)
   })  
-
+  
   cap <- renderText({
     vars_labels$question_short_en[which(vars_labels$column_name == formulaText())]
   })
@@ -268,9 +268,20 @@ server <- function(input, output, session) {
     resp() 
   })
   
+  slider_values <- renderText({
+    if(input$recode[1] == input$recode[2]) {
+      paste0("(value: ", unique(input$recode), ")")
+    } else {
+      paste0("(range: ", paste(input$recode, collapse = " to "), ")")
+    }
+  })
   
- # SOURCE INFO WITH PAIS and WAVE
-  source_info_text <- reactive({
+  output$selected_values <- eventReactive(input$go, ignoreNULL = FALSE, {
+    slider_values()
+  })
+  
+  # SOURCE INFO WITH PAIS and WAVE
+  source_info_both <- reactive({
     # Get country abbreviations that match selected country names
     pais_abbr <- dstrata %>%
       filter(pais_nam %in% input$pais) %>%
@@ -281,40 +292,69 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", AmericasBarometer Data Playground\n(Country: ", pais_display, "; Year: ", wave_display, ")")
+    paste0(", AmericasBarometer Data Playground\nCountries included: ", pais_display, "\nSurvey rounds included: ", wave_display)
+    
   })
   
-#hist 
-# must break into data event, graph event, and renderPlot to get download buttons to work
-histd <- eventReactive(input$go, ignoreNULL = FALSE, {
-  hist_df = Error(
-    dff() %>%
-      group_by(across(outcome())) %>%
-      summarise(n = n())  %>%
-      drop_na() %>%
-      rename(cat = 1) %>%
-      mutate(prop = prop.table(n) * 100,
-             proplabel = paste(round(prop), "%", sep = ""),
-             cat = str_wrap(as.character(haven::as_factor(cat)), width = 25)))
-  
-  validate(
-    need(hist_df, "Error: no data available. Please verify that this question was asked in this country/year combination")
-  )
-  return(hist_df)
+  source_info_pais <- reactive({
+    # Get country abbreviations that match selected country names
+    pais_abbr <- dstrata %>%
+      filter(pais_nam %in% input$pais) %>%
+      distinct(pais_nam, pais_lab) %>%
+      arrange(match(pais_nam, input$pais)) %>%  # preserve input order
+      pull(pais_lab)
+    
+    pais_display <- paste(pais_abbr, collapse = ", ")
+    wave_display <- paste(input$wave, collapse = ", ")
+    
+    paste0(", AmericasBarometer Data Playground\nCountries included: ", pais_display)
   })
-
+  
+  source_info_wave <- reactive({
+    # Get country abbreviations that match selected country names
+    pais_abbr <- dstrata %>%
+      filter(pais_nam %in% input$pais) %>%
+      distinct(pais_nam, pais_lab) %>%
+      arrange(match(pais_nam, input$pais)) %>%  # preserve input order
+      pull(pais_lab)
+    
+    pais_display <- paste(pais_abbr, collapse = ", ")
+    wave_display <- paste(input$wave, collapse = ", ")
+    
+    paste0(", AmericasBarometer Data Playground\nSurvey rounds included: ", wave_display)
+  })
+  
+  #hist 
+  # must break into data event, graph event, and renderPlot to get download buttons to work
+  histd <- eventReactive(input$go, ignoreNULL = FALSE, {
+    hist_df = Error(
+      dff() %>%
+        group_by(across(outcome())) %>%
+        summarise(n = n())  %>%
+        drop_na() %>%
+        rename(cat = 1) %>%
+        mutate(prop = prop.table(n) * 100,
+               proplabel = paste(round(prop), "%", sep = ""),
+               cat = str_wrap(as.character(haven::as_factor(cat)), width = 25)))
+    
+    validate(
+      need(hist_df, "Error: no data available. Please verify that this question was asked in this country/year combination")
+    )
+    return(hist_df)
+  })
+  
   
   histg <- eventReactive(input$go, ignoreNULL = FALSE, {
     histg <- lapop_hist(histd(), 
                         ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                        source_info = source_info_text())
+                        source_info = source_info_both())
     return(histg)
   })
-
+  
   output$hist <- renderPlot({
     return(histg())
   })
-
+  
   
   #ts
   tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
@@ -324,7 +364,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
         mutate(outcome_rec = case_when(
           is.na(!!sym(outcome())) ~ NA_real_,
           !!sym(outcome()) >= input$recode[1] &
-          !!sym(outcome()) <= input$recode[2] ~ 100,
+            !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(as.character(as_factor(wave))) %>%
         summarise_at(vars("outcome_rec"),
@@ -345,17 +385,17 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     tsg = lapop_ts(tsd(), 
                    ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                    label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                   source_info = source_info_text(),
-                       subtitle = "% in selected category")
+                   source_info = source_info_pais(),
+                   subtitle = "% in selected category")
     return(tsg)
   })
-
-
+  
+  
   output$ts <- renderPlot({
     return(tsg())
   })
-
-#cc 
+  
+  #cc 
   ccd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_cc = Error(
       dff() %>%
@@ -363,7 +403,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
         mutate(outcome_rec = case_when(
           is.na(!!sym(outcome())) ~ NA_real_,
           !!sym(outcome()) >= input$recode[1] &
-          !!sym(outcome()) <= input$recode[2] ~ 100,
+            !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(vallabel = pais_lab) %>%
         summarise_at(vars("outcome_rec"),
@@ -382,17 +422,20 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     ccg = lapop_cc(ccd(), sort = "hi-lo", 
                    subtitle = "% in selected category",
                    ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                   source_info = source_info_text())
+                   source_info = source_info_wave())
     return(ccg)
   })
-
+  
   output$cc <- renderPlot({
     return(ccg())
   })
-
+  
   # Use function for each demographic breakdown variable
   secdf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if (input$variable_sec == "None") {
+      NULL
+    }  else if (variable_sec() == outcome()) {
+      showNotification("You cannot break the outcome variable by itself.", type = "error")
       NULL
     } else {
       process_data(
@@ -400,7 +443,7 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
         outcome_var = outcome(),
         recode_range = input$recode,
         group_var = input$variable_sec,
-        var_label = str_wrap(variable_sec_lab(), width = 15)
+        var_label = str_wrap(variable_sec_lab(), width = 25)
       )
     }
   })
@@ -489,8 +532,8 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     moverg <- lapop_mover(moverd(), 
                           subtitle = "% in selected category", 
                           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
-                                            ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-                          source_info = source_info_text())
+                                        ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
+                          source_info = source_info_both())
     return(moverg)
   })
   
@@ -498,22 +541,71 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     return(moverg())
   })
   
-
+  # DOWNLOAD SECTION
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histogram", "hist.svg",
-             ifelse(input$tabs == "Time Series", "ts.svg",
-                    ifelse(input$tabs == "Cross-Country", "cc.svg", "mover.svg")))
+      ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),
+             ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(),".svg"),
+                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
     },
+    
     content = function(file) {
       if(input$tabs == "Histogram") {
-        lapop_save(histg(), file)
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        hist_to_save <- lapop_hist(histd(),
+                                   main_title = title_text,
+                                   subtitle = paste0("% in selected category ", subtitle_text),
+                                   ymax = ifelse(any(histd()$prop > 90), 110, 100), 
+                                   source_info = source_info_both())
+        
+        lapop_save(hist_to_save, file)
+        showNotification(HTML("Plot download complete ✓ "), type = "message")
+        
       } else if (input$tabs == "Time Series") {
-        lapop_save(tsg(), file)
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        ts_to_save <-  lapop_ts(tsd(),
+                                main_title = title_text,
+                                subtitle = paste0("% in selected category ", subtitle_text),
+                                ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
+                                label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
+                                source_info = source_info_pais())
+        
+        lapop_save(ts_to_save, file)
+        showNotification(HTML("Plot download complete ✓ "), type = "message")
+        
       } else if (input$tabs == "Cross Country") {
-        lapop_save(ccg(), file)
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        cc_to_save <- lapop_cc(ccd(), sort = "hi-lo", 
+                               main_title = title_text,
+                               subtitle = paste0("% in selected category ", subtitle_text),
+                               ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
+                               source_info = source_info_wave())
+        
+        lapop_save(cc_to_save, file)
+        showNotification(HTML("Plot download complete ✓ "), type = "message")
+        
       } else {
-        lapop_save(moverg(), file)
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        mover_to_save <- lapop_mover(
+          moverd(),
+          main_title = title_text,
+          subtitle = paste0("% in selected category ", subtitle_text),
+          ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
+                        ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
+          source_info = source_info_both()
+        )
+        
+        lapop_save(mover_to_save, file)
+        showNotification(HTML("Plot download complete ✓ "), type = "message")
+        
       }
     }
   )
@@ -521,26 +613,31 @@ histd <- eventReactive(input$go, ignoreNULL = FALSE, {
   
   output$downloadTable <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histogram", "hist.csv",
-             ifelse(input$tabs == "Time Series", "ts.csv",
-                    ifelse(input$tabs == "Cross-Country", "cc.csv", "mover.csv")))
+      ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),
+             ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(),".svg"),
+                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
     },
     content = function(file) {
       if(input$tabs == "Histogram") {
         write.csv(histd(), file)
+        showNotification(HTML("File download complete ✓ "), type = "message")
+        
       } else if (input$tabs == "Time Series") {
         write.csv(tsd(), file)
+        showNotification(HTML("File download complete ✓ "), type = "message")
+        
       } else if (input$tabs == "Cross Country") {
         write.csv(ccd(), file)
+        showNotification(HTML("File download complete ✓ "), type = "message")
+        
       } else {
         write.csv(moverd(), file)
+        showNotification(HTML("File download complete ✓ "), type = "message")
+        
       }
     }
   )
 }
 
-
+# Launch App
 shinyApp(ui, server)
-
-
-
