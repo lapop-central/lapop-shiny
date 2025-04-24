@@ -277,9 +277,9 @@ server <- function(input, output, session) {
   
   slider_values <- renderText({
     if(input$recode[1] == input$recode[2]) {
-      paste0("(valor seleccionado: ", unique(input$recode), ")")
+      paste0("(valor: ", unique(input$recode), ")")
     } else {
-      paste0("(rango seleccionado: ", paste(input$recode, collapse = " to "), ")")
+      paste0("(rango: ", paste(input$recode, collapse = " to "), ")")
     }
   })
   
@@ -568,13 +568,60 @@ server <- function(input, output, session) {
     
     content = function(file) {
       if(input$tabs == "Histograma") {
-        lapop_save(histg(), file)
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        hist_to_save <- lapop_hist(histd(),
+                                   main_title = title_text,
+                                   subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
+                                   ymax = ifelse(any(histd()$prop > 90), 110, 100), 
+                                   source_info = source_info_both())
+        
+        lapop_save(hist_to_save, file)
+        showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
+        
       } else if (input$tabs == "Serie de Tiempo") {
-        lapop_save(tsg(), file)
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        ts_to_save <-  lapop_ts(tsd(),
+                                main_title = title_text,
+                                subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
+                                ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
+                                label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
+                                source_info = source_info_pais())
+        
+        lapop_save(ts_to_save, file)
+        showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
+        
       } else if (input$tabs == "Comparativo") {
-        lapop_save(ccg(), file)
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        cc_to_save <- lapop_cc(ccd(), sort = "hi-lo", 
+                               main_title = title_text,
+                               subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
+                               ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
+                               source_info = source_info_wave())
+        
+        lapop_save(cc_to_save, file)
+        showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
+        
       } else {
-        lapop_save(moverg(), file)
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        mover_to_save <- lapop_mover(
+          moverd(),
+          main_title = title_text,
+          subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
+          ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
+                        ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
+          source_info = source_info_both()
+        )
+        
+        lapop_save(mover_to_save, file)
+        showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
       }
     }
   )
@@ -589,12 +636,16 @@ server <- function(input, output, session) {
     content = function(file) {
       if(input$tabs == "Histograma") {
         write.csv(histd(), file)
+        showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       } else if (input$tabs == "Serie de Tiempo") {
         write.csv(tsd(), file)
+        showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       } else if (input$tabs == "Comparativo") {
         write.csv(ccd(), file)
+        showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       } else {
         write.csv(moverd(), file)
+        showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       }
     }
   )

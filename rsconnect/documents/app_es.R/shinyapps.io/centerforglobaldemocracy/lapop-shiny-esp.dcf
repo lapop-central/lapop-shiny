@@ -5,7 +5,7 @@ account: centerforglobaldemocracy
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 14122023
-bundleId: 10172817
+bundleId: 10172904
 url: https://centerforglobaldemocracy.shinyapps.io/lapop-shiny-esp/
 version: 1
 asMultiple: FALSE
