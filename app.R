@@ -541,7 +541,7 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
-  # DOWNLOAD SECTION
+  # DOWNLOAD PLOT
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),
@@ -566,6 +566,15 @@ server <- function(input, output, session) {
       } else if (input$tabs == "Time Series") {
         title_text <- isolate(cap())
         subtitle_text <- slider_values()
+        
+        # Check for single time period
+        if(any(table(tsd()$wave) == 1)) {
+          showNotification(
+            "Caution: your selection includes only one time period",
+            type = "warning",
+            duration = 5
+          )
+        }
         
         ts_to_save <-  lapop_ts(tsd(),
                                 main_title = title_text,
@@ -610,12 +619,13 @@ server <- function(input, output, session) {
     }
   )
   
-  
+  # DOWNLOAD TABLE
   output$downloadTable <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),
-             ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(),".svg"),
-                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
+      ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".csv"),
+             ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(),".csv"),
+                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(),".csv"),  
+                           paste0("mover_", outcome(),".csv"))))
     },
     content = function(file) {
       if(input$tabs == "Histogram") {

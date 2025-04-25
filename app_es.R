@@ -584,6 +584,15 @@ server <- function(input, output, session) {
         title_text <- isolate(cap())
         subtitle_text <- slider_values()
         
+        # Check for single time period
+        if(any(table(tsd()$wave) == 1)) {
+          showNotification(
+            "Advertencia: su selección incluye solo una serie de tiempo",
+            type = "warning",
+            duration = 5
+          )
+        }
+        
         ts_to_save <-  lapop_ts(tsd(),
                                 main_title = title_text,
                                 subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
@@ -629,9 +638,10 @@ server <- function(input, output, session) {
   
   output$downloadTable <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".svg"),
-             ifelse(input$tabs == "Serie de Tiempo",  paste0("ts_", outcome(),".svg"),
-                    ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
+      ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".csv"),
+             ifelse(input$tabs == "Serie de Tiempo",  paste0("ts_", outcome(),".csv"),
+                    ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".csv"),  
+                           paste0("mover_", outcome(),".csv"))))
     },
     content = function(file) {
       if(input$tabs == "Histograma") {

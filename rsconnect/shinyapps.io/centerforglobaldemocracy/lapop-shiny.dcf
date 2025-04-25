@@ -1,0 +1,13 @@
+name: lapop-shiny
+title: lapop-shiny
+username: centerforglobaldemocracy
+account: centerforglobaldemocracy
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13748963
+bundleId: 10174394
+url: https://centerforglobaldemocracy.shinyapps.io/lapop-shiny/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .gitattributes|.Rprofile|app_es.R|Data Preprocessing/gm_shiny.do|Data Preprocessing/gm_shiny_data.rds|Data Preprocessing/pais_lab.csv|Data Preprocessing/shiny_preprocess.R|Data Preprocessing/variable_labels_shiny.csv|gm_shiny_data_es.rds|labs_es.rds
