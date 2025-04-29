@@ -96,7 +96,8 @@ ui <- fluidPage(
                                "Panamá", "Paraguay", "Perú", "Uruguay"),
                   options = list(`actions-box` = TRUE,
                                  `select-all-text` = "Seleccionar todos",
-                                 `deselect-all-text` = "Deseleccionar todos"),
+                                 `deselect-all-text` = "Deseleccionar todos",
+                                 `none-selected-text` = "Nada seleccionado"),
                   multiple = TRUE), 
       
       #this fixes a formatting issue with checkboxGroupInput below
@@ -137,7 +138,8 @@ ui <- fluidPage(
                                "2016/17", "2018/19", "2021", "2023"),
                   options = list(`actions-box` = TRUE,
                                  `select-all-text` = "Seleccionar todos",
-                                 `deselect-all-text` = "Deseleccionar todos"),
+                                 `deselect-all-text` = "Deseleccionar todos",
+                                 `none-selected-text` = "Nada seleccionado"),
                   # options = list
                   multiple = TRUE),
       
@@ -279,7 +281,7 @@ server <- function(input, output, session) {
     if(input$recode[1] == input$recode[2]) {
       paste0("(valor: ", unique(input$recode), ")")
     } else {
-      paste0("(rango: ", paste(input$recode, collapse = " to "), ")")
+      paste0("(rango: ", paste(input$recode, collapse = " a "), ")")
     }
   })
   
@@ -289,6 +291,7 @@ server <- function(input, output, session) {
   
   
   # SOURCE INFO WITH PAIS and WAVE
+  # # -----------------------------------------------------------------------
   source_info_both <- reactive({
     # Get country abbreviations that match selected country names
     pais_abbr <- dstrata %>%
@@ -300,11 +303,13 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    if (head(pais_display) > 5) {
-      paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display, ".\nRondas incluidas: ", wave_display)
+    if (nchar(pais_display) > 10) {
+      paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
+             ".\nRonda: ", wave_display)
       
     } else {
-      paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display, ". Rondas incluidas: ", wave_display)
+      paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
+             ". Ronda: ", wave_display)
     }
   })
   
@@ -319,7 +324,8 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", Barómetro de las Américas Data Playground\nPaíses incluidos: ", pais_display)
+    paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
+           ".\nRonda: ", wave_display)
   })
   
   source_info_wave <- reactive({
@@ -333,10 +339,12 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", Barómetro de las Américas Data Playground\nRondas incluidas: ", wave_display)
+    paste0(", Barómetro de las Américas Data Playground\nRondas: ", wave_display, 
+           ".\nRonda: ", wave_display)
   })
   
-  #hist 
+  # HISTOGRAM
+  # # -----------------------------------------------------------------------
   # must break into data event, graph event, and renderPlot to get download buttons to work
   histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     hist_df = Error(
@@ -369,7 +377,8 @@ server <- function(input, output, session) {
   })
   
   
-  #ts
+  # TIME SERIES
+  # # -----------------------------------------------------------------------
   tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_ts = Error(
       dff() %>%
@@ -409,7 +418,8 @@ server <- function(input, output, session) {
     return(tsg())
   })
   
-  #cc 
+  # CROSS COUNTRY
+  # # -----------------------------------------------------------------------
   ccd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_cc = Error(
       dff() %>%
@@ -445,7 +455,8 @@ server <- function(input, output, session) {
     return(ccg())
   })
   
-  # Use function for each demographic Desglose variable
+  # BREAK DOWN Use function for each demographic Desglose variable
+  # # -----------------------------------------------------------------------
   secdf <- eventReactive(input$go, ignoreNULL = FALSE, {
     if (input$variable_sec == "None") {
       NULL
@@ -559,6 +570,7 @@ server <- function(input, output, session) {
   })
   
   # DOWNLOAD SECTION
+  # -------------------------------------------------------------------------
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".svg"),
@@ -575,7 +587,9 @@ server <- function(input, output, session) {
                                    main_title = title_text,
                                    subtitle = "% en la categoría seleccionada ",
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                                   source_info = source_info_both())
+                                   lang = "es",
+                                   source_info = paste0(source_info_both(), "\n", str_wrap(word(), 125), " ", resp())
+                                   )
         
         lapop_save(hist_to_save, file)
         showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
@@ -598,7 +612,9 @@ server <- function(input, output, session) {
                                 subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
                                 ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                                 label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                                source_info = source_info_pais())
+                                lang = "es",
+                                source_info = paste0(source_info_pais(), "\n", str_wrap(word(), 125), " ", resp())
+                                )
         
         lapop_save(ts_to_save, file)
         showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
@@ -611,7 +627,9 @@ server <- function(input, output, session) {
                                main_title = title_text,
                                subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
                                ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                               source_info = source_info_wave())
+                               lang = "es",
+                               source_info = paste0(source_info_wave(),"\n", str_wrap(word(), 125), " ", resp())
+                               )
         
         lapop_save(cc_to_save, file)
         showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
@@ -626,8 +644,9 @@ server <- function(input, output, session) {
           subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-          source_info = source_info_both()
-        )
+          lang = "es",
+          source_info = paste0(source_info_both(), "\n", str_wrap(word(), 125), " ", resp())
+          )
         
         lapop_save(mover_to_save, file)
         showNotification(HTML("Descarga de figura completada ✓ "), type = "message")

@@ -292,7 +292,8 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", AmericasBarometer Data Playground\nCountries included: ", pais_display, "\nSurvey rounds included: ", wave_display)
+    paste0(", AmericasBarometer Data Playground\nCountries: ", pais_display, 
+           "\nSurvey rounds: ", wave_display)
     
   })
   
@@ -307,7 +308,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", AmericasBarometer Data Playground\nCountries included: ", pais_display)
+    paste0(", AmericasBarometer Data Playground\nCountries: ", pais_display)
   })
   
   source_info_wave <- reactive({
@@ -321,7 +322,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", AmericasBarometer Data Playground\nSurvey rounds included: ", wave_display)
+    paste0(", AmericasBarometer Data Playground\nSurvey rounds: ", wave_display)
   })
   
   #hist 
@@ -541,7 +542,8 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
-  # DOWNLOAD PLOT
+  # DOWNLOAD PLOTS
+  # # -----------------------------------------------------------------------
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),
@@ -558,7 +560,8 @@ server <- function(input, output, session) {
                                    main_title = title_text,
                                    subtitle = "% in selected category ",
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                                   source_info = source_info_both())
+                                   source_info = paste0(source_info_both(), "\n", str_wrap(word(), 125), " ", resp())
+        )
         
         lapop_save(hist_to_save, file)
         showNotification(HTML("Plot download complete ✓ "), type = "message")
@@ -581,7 +584,8 @@ server <- function(input, output, session) {
                                 subtitle = paste0("% in selected category ", subtitle_text),
                                 ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                                 label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                                source_info = source_info_pais())
+                                source_info = paste0(source_info_pais(), "\n", str_wrap(word(), 125), " ", resp())
+                                )
         
         lapop_save(ts_to_save, file)
         showNotification(HTML("Plot download complete ✓ "), type = "message")
@@ -594,7 +598,8 @@ server <- function(input, output, session) {
                                main_title = title_text,
                                subtitle = paste0("% in selected category ", subtitle_text),
                                ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                               source_info = source_info_wave())
+                               source_info = paste0(source_info_wave(), "\n", str_wrap(word(), 125), " ", resp())
+                               )
         
         lapop_save(cc_to_save, file)
         showNotification(HTML("Plot download complete ✓ "), type = "message")
@@ -609,7 +614,7 @@ server <- function(input, output, session) {
           subtitle = paste0("% in selected category ", subtitle_text),
           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-          source_info = source_info_both()
+          source_info = paste0(source_info_both(), "\n", str_wrap(word(), 125), " ", resp())
         )
         
         lapop_save(mover_to_save, file)
