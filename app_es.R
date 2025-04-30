@@ -100,7 +100,7 @@ ui <- fluidPage(
                                  `none-selected-text` = "Nada seleccionado"),
                   multiple = TRUE), 
       
-      #this fixes a formatting issue with checkboxGroupInput below
+      # This fixes a formatting issue with checkboxGroupInput below
       tags$head(
         tags$style(
           HTML(
@@ -117,7 +117,15 @@ ui <- fluidPage(
         ) 
       ),
       
-      #this makes slider input only integers
+      # This triggers the "Generate" button
+      tags$script(HTML("
+      Shiny.addCustomMessageHandler('clickGenerateButton', function(message) {
+    $('#go').click();
+  });
+")),
+      
+      
+      # This makes slider input only integers
       tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
       
       
@@ -140,7 +148,6 @@ ui <- fluidPage(
                                  `select-all-text` = "Seleccionar todos",
                                  `deselect-all-text` = "Deseleccionar todos",
                                  `none-selected-text` = "Nada seleccionado"),
-                  # options = list
                   multiple = TRUE),
       
       # show recode slider only for time series, cc, and breakdown (not hist)
@@ -200,6 +207,15 @@ ui <- fluidPage(
 
 # Define server logic to plot various variables ----
 server <- function(input, output, session) {
+  
+  # Triggers "go" between server and ui to generate default plots
+  observe({
+    if (!is.null(input$pais) && !is.null(input$wave)) {
+      isolate({
+        session$sendCustomMessage("clickGenerateButton", list())
+      })
+    }
+  })
   
   formulaText <- reactive({
     paste(input$variable)
@@ -305,11 +321,11 @@ server <- function(input, output, session) {
     
     if (nchar(pais_display) > 10) {
       paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
-             ".\nRonda: ", wave_display)
+             ".\nRondas: ", wave_display)
       
     } else {
       paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
-             ". Ronda: ", wave_display)
+             ". Rondas: ", wave_display)
     }
   })
   
@@ -324,8 +340,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
-           ".\nRonda: ", wave_display)
+    paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display)
   })
   
   source_info_wave <- reactive({
@@ -339,8 +354,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", Barómetro de las Américas Data Playground\nRondas: ", wave_display, 
-           ".\nRonda: ", wave_display)
+    paste0(", Barómetro de las Américas Data Playground\nRondas: ", wave_display)
   })
   
   # HISTOGRAM

@@ -98,7 +98,7 @@ ui <- fluidPage(
                   multiple = TRUE), 
       
       
-      #this fixes a formatting issue with checkboxGroupInput below
+      # This fixes a formatting issue with checkboxGroupInput below
       tags$head(
         tags$style(
           HTML(
@@ -115,7 +115,14 @@ ui <- fluidPage(
         ) 
       ),
       
-      #this makes slider input only integers
+      # This triggers the "Generate" button
+      tags$script(HTML("
+      Shiny.addCustomMessageHandler('clickGenerateButton', function(message) {
+    $('#go').click();
+  });
+")),
+      
+      # This makes slider input only integers
       tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
       
       
@@ -135,10 +142,9 @@ ui <- fluidPage(
                   selected = c("2006", "2008", "2010", "2012", "2014",
                                "2016/17", "2018/19", "2021", "2023"),
                   options = list(`actions-box` = TRUE),
-                  # options = list
                   multiple = TRUE), 
       
-      # show recode slider only for time series, cc, and breakdown (not hist)
+      # Show recode slider only for time series, cc, and breakdown (not hist)
       conditionalPanel(
         'input.tabs == "Time Series" | input.tabs == "Cross Country" | input.tabs == "Breakdown"',
         uiOutput("sliderUI"),
@@ -191,6 +197,15 @@ ui <- fluidPage(
 
 # Define server logic to plot various variables ----
 server <- function(input, output, session) {
+  
+  # Triggers "go" between server and ui to generate default plots
+  observe({
+    if (!is.null(input$pais) && !is.null(input$wave)) {
+      isolate({
+        session$sendCustomMessage("clickGenerateButton", list())
+      })
+    }
+  })
   
   formulaText <- reactive({
     paste(input$variable)
