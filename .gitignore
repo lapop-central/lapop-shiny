@@ -5,3 +5,5 @@
 .Rhistory
 .Rhistory
 *.dcf
+.Rhistory
+*.dcf
