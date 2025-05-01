@@ -319,9 +319,9 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    if (nchar(pais_display) > 10) {
+    if (nchar(pais_display) > 15) {
       paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
-             ".\nRondas: ", wave_display)
+             "\nRondas: ", wave_display)
       
     } else {
       paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 

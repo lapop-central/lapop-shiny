@@ -1,6 +1,5 @@
-library(dplyr)
-library(haven)
-library(srvyr)
+#Load Packages
+library(dplyr); library(haven); library(srvyr)
 
 rm(list=ls())
 
@@ -105,9 +104,9 @@ gm$edrer <- ifelse(is.na(gm$edrer), gm$edrr2, gm$edrer)
 gm$edrer <- ifelse(gm$edrer == 0, 1, gm$edrer)
 
 labels_edrerf <- if (esp) {
-  c("Ninguna/primaria", "Secundaria", "Superior")
+  c("Ninguna o primaria", "Secundaria", "Superior")
 } else {
-  c("None/Primary", "Secondary", "Superior")
+  c("None or Primary", "Secondary", "Superior")
 }
 
 
