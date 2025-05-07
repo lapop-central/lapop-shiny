@@ -5,8 +5,8 @@ rm(list=ls())
 
 # If creating Spanish version, set to true
 # # -----------------------------------------------------------------------
-#esp <- TRUE
-esp <- FALSE
+esp <- TRUE
+#esp <- FALSE
 
 # Read in RAW grand merge (gm) data created from Stata do file
 # # -----------------------------------------------------------------------
@@ -135,7 +135,7 @@ gm$l1 <- ifelse(is.na(gm$l1), gm$l1b, gm$l1)
 
 if (esp) {
   gm$l1 = labelled(gm$l1,
-                   c("Izquierda/liberal" = 1, "Derecha/conservador" = 10),
+                   c("Izquierda o liberal" = 1, "Derecha o conservador" = 10),
                    label = "Ideología")
 } else {
   gm$l1 = labelled(gm$l1,

@@ -575,7 +575,7 @@ server <- function(input, output, session) {
                                    main_title = title_text,
                                    subtitle = "% in selected category ",
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                                   source_info = paste0(source_info_both(), "\n", str_wrap(word(), 125), " ", resp())
+                                   source_info = paste0(source_info_both(), "\n", str_wrap(paste0(word(), " ", resp()), 125))
         )
         
         lapop_save(hist_to_save, file)
@@ -586,21 +586,21 @@ server <- function(input, output, session) {
         subtitle_text <- slider_values()
         
         # Check for single time period
-        if(any(table(tsd()$wave) == 1)) {
-          showNotification(
-            "Caution: your selection includes only one time period",
-            type = "warning",
-            duration = 5
-          )
-        }
+        #if(any(table(tsd()$wave) == 1)) {
+          #showNotification(
+            #"Caution: your selection includes only one time period",
+            #type = "warning",
+            #duration = 5
+          #)
+        #}
         
         ts_to_save <-  lapop_ts(tsd(),
                                 main_title = title_text,
                                 subtitle = paste0("% in selected category ", subtitle_text),
                                 ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                                 label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                                source_info = paste0(source_info_pais(), "\n", str_wrap(word(), 125), " ", resp())
-                                )
+                                source_info = paste0(source_info_pais(), "\n", str_wrap(paste0(word(), " ", resp()), 125))
+        )
         
         lapop_save(ts_to_save, file)
         showNotification(HTML("Plot download complete ✓ "), type = "message")
@@ -613,8 +613,8 @@ server <- function(input, output, session) {
                                main_title = title_text,
                                subtitle = paste0("% in selected category ", subtitle_text),
                                ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                               source_info = paste0(source_info_wave(), "\n", str_wrap(word(), 125), " ", resp())
-                               )
+                               source_info = paste0(source_info_wave(), "\n", str_wrap(paste0(word(), " ", resp()), 125))
+        )
         
         lapop_save(cc_to_save, file)
         showNotification(HTML("Plot download complete ✓ "), type = "message")
@@ -629,7 +629,7 @@ server <- function(input, output, session) {
           subtitle = paste0("% in selected category ", subtitle_text),
           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-          source_info = paste0(source_info_both(), "\n", str_wrap(word(), 125), " ", resp())
+          source_info = paste0(source_info_both(), "\n", str_wrap(paste0(word(), " ", resp()), 125))
         )
         
         lapop_save(mover_to_save, file)
