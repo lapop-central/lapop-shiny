@@ -320,11 +320,11 @@ server <- function(input, output, session) {
     wave_display <- paste(input$wave, collapse = ", ")
     
     if (nchar(pais_display) > 15) {
-      paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
+      paste0("Fuente: LAPOP Lab, Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
              "\nRondas: ", wave_display)
       
     } else {
-      paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
+      paste0("Fuente: LAPOP Lab, Barómetro de las Américas Data Playground\nPaíses: ", pais_display, 
              ". Rondas: ", wave_display)
     }
   })
@@ -340,7 +340,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", Barómetro de las Américas Data Playground\nPaíses: ", pais_display)
+    paste0("Fuente: LAPOP Lab, Barómetro de las Américas Data Playground\nPaíses: ", pais_display)
   })
   
   source_info_wave <- reactive({
@@ -354,7 +354,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", Barómetro de las Américas Data Playground\nRondas: ", wave_display)
+    paste0("Fuente: LAPOP Lab, Barómetro de las Américas Data Playground\nRondas: ", wave_display)
   })
   
   # HISTOGRAM

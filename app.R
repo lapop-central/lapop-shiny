@@ -4,7 +4,7 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(shinyWidgets)
-library(Hmisc)
+library(Hmisc, exclude = c("src", "summarize"))
 
 lapop_fonts()
 
@@ -307,7 +307,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", AmericasBarometer Data Playground\nCountries: ", pais_display, 
+    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\nCountries: ", pais_display, 
            "\nSurvey rounds: ", wave_display)
     
   })
@@ -323,7 +323,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", AmericasBarometer Data Playground\nCountries: ", pais_display)
+    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\nCountries: ", pais_display)
   })
   
   source_info_wave <- reactive({
@@ -337,7 +337,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0(", AmericasBarometer Data Playground\nSurvey rounds: ", wave_display)
+    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\nSurvey rounds: ", wave_display)
   })
   
   #hist 
