@@ -678,16 +678,16 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       if(input$tabs == "Histograma") {
-        write.csv(histd(), file)
+        write.csv(histd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       } else if (input$tabs == "Serie de Tiempo") {
-        write.csv(tsd(), file)
+        write.csv(tsd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       } else if (input$tabs == "Comparativo") {
-        write.csv(ccd(), file)
+        write.csv(ccd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       } else {
-        write.csv(moverd(), file)
+        write.csv(moverd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       }
     }
