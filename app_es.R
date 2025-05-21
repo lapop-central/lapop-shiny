@@ -606,7 +606,7 @@ server <- function(input, output, session) {
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
                                    lang = "es",
                                    source_info = paste0(source_info_both(), "\n\n", 
-                                                        str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
+                                                        str_wrap(paste0(word(), " ", resp()), 125))
                                    )
         
         lapop_save(hist_to_save, file)
@@ -632,7 +632,7 @@ server <- function(input, output, session) {
                                 label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
                                 lang = "es",
                                 source_info = paste0(source_info_pais(), "\n\n", 
-                                                     str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
+                                                     str_wrap(paste0(word(), " ", resp()), 125))
         )
         
         lapop_save(ts_to_save, file)
@@ -666,7 +666,7 @@ server <- function(input, output, session) {
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
           lang = "es",
           source_info = paste0(source_info_both(), "\n\n", 
-                               str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
+                               str_wrap(paste0(word(), " ", resp()), 125))
         )
         
         lapop_save(mover_to_save, file)
