@@ -82,7 +82,7 @@ ui <- fluidPage(
     sidebarPanel(
       width = 3,  # Reduce width (default is 4)
       
-      selectInput("variable", "Variable",
+      selectInput("variable", "Outcome variable",
                   labs[order(names(labs))],
                   selected = "ing4"),
       
@@ -215,6 +215,10 @@ server <- function(input, output, session) {
     input$variable
   })
   
+  outcome_code <- reactive({
+    vars_labels$column_name[which(vars_labels$column_name == paste(outcome()))]
+  })
+  
   variable_sec <- reactive({
     input$variable_sec
   })
@@ -244,7 +248,7 @@ server <- function(input, output, session) {
   
   output$sliderUI <- renderUI({
     sliderInput(inputId = "recode",
-                label = "Response values included in percentage",
+                label = "Outcome variable response values shown as percentage",
                 min = min(as.numeric(dstrata[[formulaText()]]), na.rm=TRUE), 
                 max = max(as.numeric(dstrata[[formulaText()]]), na.rm=TRUE), 
                 value = sliderParams$valuex,
@@ -451,7 +455,7 @@ server <- function(input, output, session) {
     if (input$variable_sec == "None") {
       NULL
     }  else if (variable_sec() == outcome()) {
-      showNotification("You cannot break the outcome variable by itself.", type = "error")
+      showNotification("You cannot break down the outcome variable by itself.", type = "error")
       NULL
     } else {
       process_data(
@@ -575,7 +579,8 @@ server <- function(input, output, session) {
                                    main_title = title_text,
                                    subtitle = "% in selected category ",
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                                   source_info = paste0(source_info_both(), "\n\n", str_wrap(paste0(word(), " ", resp()), 125))
+                                   source_info = paste0(source_info_both(), "\n\n", 
+                                                        str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
         )
         
         lapop_save(hist_to_save, file)
@@ -599,7 +604,8 @@ server <- function(input, output, session) {
                                 subtitle = paste0("% in selected category ", subtitle_text),
                                 ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                                 label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                                source_info = paste0(source_info_pais(), "\n\n", str_wrap(paste0(word(), " ", resp()), 125))
+                                source_info = paste0(source_info_pais(), "\n\n", 
+                                                     str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
         )
         
         lapop_save(ts_to_save, file)
@@ -613,7 +619,8 @@ server <- function(input, output, session) {
                                main_title = title_text,
                                subtitle = paste0("% in selected category ", subtitle_text),
                                ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                               source_info = paste0(source_info_wave(), "\n\n", str_wrap(paste0(word(), " ", resp()), 125))
+                               source_info = paste0(source_info_wave(), "\n\n", 
+                                                    str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
         )
         
         lapop_save(cc_to_save, file)
@@ -629,7 +636,8 @@ server <- function(input, output, session) {
           subtitle = paste0("% in selected category ", subtitle_text),
           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-          source_info = paste0(source_info_both(), "\n\n", str_wrap(paste0(word(), " ", resp()), 125))
+          source_info = paste0(source_info_both(), "\n\n", 
+                               str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
         )
         
         lapop_save(mover_to_save, file)

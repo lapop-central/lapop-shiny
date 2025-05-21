@@ -82,7 +82,7 @@ ui <- fluidPage(
     # Sidebar panel for inputs ----
     sidebarPanel(
       
-      selectInput("variable", "Variable",
+      selectInput("variable", "Variable de interés",
                   labs[order(names(labs))],
                   selected = "ing4"),
       
@@ -152,7 +152,7 @@ ui <- fluidPage(
       
       # show recode slider only for time series, cc, and breakdown (not hist)
       conditionalPanel(
-        'input.tabs == "Serie de Tiempo" | input.tabs == "Comparativo" | input.tabs == "Desglose"',
+        'input.tabs == "Serie temporal" | input.tabs == "Comparativo" | input.tabs == "Desglose"',
         uiOutput("sliderUI"),
       ),
       
@@ -188,7 +188,7 @@ ui <- fluidPage(
       tabsetPanel(id = "tabs",
                   tabPanel("Histograma", plotOutput("hist")),
                   
-                  tabPanel("Serie de Tiempo", plotOutput("ts")),
+                  tabPanel("Serie temporal", plotOutput("ts")),
                   
                   tabPanel("Comparativo", plotOutput("cc")),
                   
@@ -225,6 +225,10 @@ server <- function(input, output, session) {
     input$variable
   })
   
+  outcome_code <- reactive({
+    vars_labels$column_name[which(vars_labels$column_name == paste(outcome()))]
+  })
+  
   variable_sec <- reactive({
     input$variable_sec
   })
@@ -254,14 +258,12 @@ server <- function(input, output, session) {
   
   output$sliderUI <- renderUI({
     sliderInput(inputId = "recode",
-                label = "Valores de respuesta incluidos en porcentaje",
+                label = "Valores de respuesta de la variable de interés en porcentaje",
                 min = min(as.numeric(dstrata[[formulaText()]]), na.rm=TRUE), 
                 max = max(as.numeric(dstrata[[formulaText()]]), na.rm=TRUE), 
                 value = sliderParams$valuex,
                 step = 1)
   })
-  
-  
   
   dff <- eventReactive(input$go, ignoreNULL = FALSE, {
     dstrata %>%
@@ -588,7 +590,7 @@ server <- function(input, output, session) {
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".svg"),
-             ifelse(input$tabs == "Serie de Tiempo",  paste0("ts_", outcome(),".svg"),
+             ifelse(input$tabs == "Serie temporal",  paste0("ts_", outcome(),".svg"),
                     ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
     },
     
@@ -602,20 +604,21 @@ server <- function(input, output, session) {
                                    subtitle = "% en la categoría seleccionada ",
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
                                    lang = "es",
-                                   source_info = paste0(source_info_both(), "\n\n", str_wrap(paste0(word(), " ", resp()), 125))
+                                   source_info = paste0(source_info_both(), "\n\n", 
+                                                        str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
                                    )
         
         lapop_save(hist_to_save, file)
         showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
         
-      } else if (input$tabs == "Serie de Tiempo") {
+      } else if (input$tabs == "Serie temporal") {
         title_text <- isolate(cap())
         subtitle_text <- slider_values()
         
         # Check for single time period
         #if(any(table(tsd()$wave) == 1)) {
           #showNotification(
-           # "Advertencia: su selección incluye solo una serie de tiempo",
+           # "Advertencia: su selección incluye solo una serie temporal",
             #type = "warning",
             #duration = 5
           #)
@@ -627,7 +630,8 @@ server <- function(input, output, session) {
                                 ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                                 label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
                                 lang = "es",
-                                source_info = paste0(source_info_pais(), "\n\n", str_wrap(paste0(word(), " ", resp()), 125))
+                                source_info = paste0(source_info_pais(), "\n\n", 
+                                                     str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
         )
         
         lapop_save(ts_to_save, file)
@@ -642,7 +646,8 @@ server <- function(input, output, session) {
                                subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
                                ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
                                lang = "es",
-                               source_info = paste0(source_info_wave(), "\n\n", str_wrap(paste0(word(), " ", resp()), 125))
+                               source_info = paste0(source_info_wave(), "\n\n", 
+                                                    str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
         )
         
         lapop_save(cc_to_save, file)
@@ -659,7 +664,8 @@ server <- function(input, output, session) {
           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
           lang = "es",
-          source_info = paste0(source_info_both(), "\n\n", str_wrap(paste0(word(), " ", resp()), 125))
+          source_info = paste0(source_info_both(), "\n\n", 
+                               str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
         )
         
         lapop_save(mover_to_save, file)
@@ -672,7 +678,7 @@ server <- function(input, output, session) {
   output$downloadTable <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".csv"),
-             ifelse(input$tabs == "Serie de Tiempo",  paste0("ts_", outcome(),".csv"),
+             ifelse(input$tabs == "Serie temporal",  paste0("ts_", outcome(),".csv"),
                     ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".csv"),  
                            paste0("mover_", outcome(),".csv"))))
     },
@@ -680,7 +686,7 @@ server <- function(input, output, session) {
       if(input$tabs == "Histograma") {
         write.csv(histd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
-      } else if (input$tabs == "Serie de Tiempo") {
+      } else if (input$tabs == "Serie temporal") {
         write.csv(tsd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
       } else if (input$tabs == "Comparativo") {
@@ -693,6 +699,5 @@ server <- function(input, output, session) {
     }
   )
 }
-
 
 shinyApp(ui, server)
