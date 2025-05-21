@@ -281,7 +281,7 @@ server <- function(input, output, session) {
   
   word <- renderText({
     paste0(toupper(vars_labels$column_name[which(vars_labels$column_name == formulaText())]), ". ",
-           vars_labels$question_en[which(vars_labels$column_name == formulaText())])
+           vars_labels$question_es[which(vars_labels$column_name == formulaText())])
   })
   
   output$wording <- eventReactive(input$go, ignoreNULL = FALSE, {
