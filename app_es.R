@@ -81,6 +81,7 @@ ui <- fluidPage(
     
     # Sidebar panel for inputs ----
     sidebarPanel(
+      width = 3, # Reduce width (default is 4)
       
       selectInput("variable", "Variable de interés",
                   labs[order(names(labs))],
