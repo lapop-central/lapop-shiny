@@ -207,6 +207,17 @@ server <- function(input, output, session) {
     }
   })
   
+  # Triggers warning for mover plot
+  observeEvent(input$demog, {
+    # Check the number of selected variables
+    if (length(input$demog) > 3 & input$variable_sec != "None") {
+      # Show a warning message
+      showNotification(HTML("You should select a maximum of 3 demographic variables to plot."), type = "warning")
+    }
+  })
+  
+# # -----------------------------------------------------------------------
+  
   formulaText <- reactive({
     paste(input$variable)
   })
