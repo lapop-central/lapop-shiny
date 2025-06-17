@@ -660,7 +660,7 @@ server <- function(input, output, session) {
                                ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
                                lang = "es",
                                source_info = paste0(source_info_wave(), "\n\n", 
-                                                    str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
+                                                    str_wrap(paste0(word(), " ", resp()), 125))
         )
         
         lapop_save(cc_to_save, file)
