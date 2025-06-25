@@ -323,8 +323,8 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\n\nCountries: ", pais_display, 
-           "\nSurvey rounds: ", wave_display)
+    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\n\nCountries selected: ", pais_display, 
+           "\nSurvey rounds selected: ", wave_display)
     
   })
   
@@ -339,7 +339,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\n\nCountries: ", pais_display)
+    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\n\nCountries selected: ", pais_display)
   })
   
   source_info_wave <- reactive({
@@ -353,7 +353,7 @@ server <- function(input, output, session) {
     pais_display <- paste(pais_abbr, collapse = ", ")
     wave_display <- paste(input$wave, collapse = ", ")
     
-    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\n\nSurvey rounds: ", wave_display)
+    paste0("Source: LAPOP Lab, AmericasBarometer Data Playground\n\nSurvey rounds selected: ", wave_display)
   })
   
   #hist 
@@ -592,7 +592,7 @@ server <- function(input, output, session) {
                                    subtitle = "% in selected category ",
                                    ymax = ifelse(any(histd()$prop > 90), 110, 100), 
                                    source_info = paste0(source_info_both(), "\n\n", 
-                                                        str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
+                                                        str_wrap(paste0(word(), " ", resp()), 125))
         )
         
         lapop_save(hist_to_save, file)
@@ -617,7 +617,7 @@ server <- function(input, output, session) {
                                 ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                                 label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
                                 source_info = paste0(source_info_pais(), "\n\n", 
-                                                     str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
+                                                     str_wrap(paste0(word(), " ", resp()), 125))
         )
         
         lapop_save(ts_to_save, file)
@@ -649,7 +649,7 @@ server <- function(input, output, session) {
           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
           source_info = paste0(source_info_both(), "\n\n", 
-                               str_wrap(paste0(toupper(outcome_code()), ". ", word(), " ", resp()), 125))
+                               str_wrap(paste0(word(), " ", resp()), 125))
         )
         
         lapop_save(mover_to_save, file)
