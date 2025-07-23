@@ -9,6 +9,9 @@ library(Hmisc, exclude = c("src", "summarize", "format.pval", "units"))
 =======
 library(Hmisc)
 # # -----------------------------------------------------------------------
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 lapop_fonts()
@@ -114,7 +117,12 @@ ui <- fluidPage(
       width = 3,  # Reduce width (default is 4)
       
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       selectInput("variable", "Outcome variable",
+=======
+      selectInput(inputId = "variable", 
+                  label = "Variable",
+>>>>>>> Stashed changes
 =======
       selectInput(inputId = "variable", 
                   label = "Variable",
@@ -368,7 +376,11 @@ server <- function(input, output, session) {
         )
       
       showNotification(
+<<<<<<< Updated upstream
         paste0("Attention: the following country-year combinations have no data for ", outcome(), "\n",
+=======
+        paste0("Attention: the following country-year combinations have no data for ", outcome(),
+>>>>>>> Stashed changes
                paste(missing$combo_label, collapse = ", ")),
         type = "warning", duration = 30
       )
@@ -654,6 +666,9 @@ server <- function(input, output, session) {
   # DOWNLOAD SECTION
   # # -----------------------------------------------------------------------
   
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
