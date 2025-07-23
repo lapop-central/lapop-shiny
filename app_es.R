@@ -7,6 +7,8 @@ library(stringr)
 library(shinyWidgets)
 library(Hmisc)
 
+# # -----------------------------------------------------------------------
+
 lapop_fonts()
 
 dstrata <- readRDS("gm_shiny_data_es.rds")
@@ -20,7 +22,9 @@ Error<-function(x){
 waves_total = c("2004", "2006", "2008", "2010", "2012", "2014", "2016/17", "2018/19", "2021", "2023")
 
 
-#helper function for cleaning ts -- handle missing values at end or middle of series
+# helper function for cleaning ts -- handle missing values at end or middle of series
+# # -----------------------------------------------------------------------
+
 omit_na_edges <- function(df) {
   # Find which rows have NA values
   na_rows <- apply(df, 1, function(row) any(is.na(row)))
@@ -35,7 +39,9 @@ omit_na_edges <- function(df) {
   return(df_clean)
 }
 
-#custom weighted averages and CIs, to speed up computational speed vs. survey_mean
+# Custom helper weighted averages and CIs, to speed up computational speed vs. survey_mean
+# # -----------------------------------------------------------------------
+
 weighted.ttest.ci <- function(x, weights) {
   nx <- length(x)
   vx <- Hmisc::wtd.var(x, weights, normwt = TRUE, na.rm = TRUE) ## From Hmisc
@@ -50,6 +56,8 @@ weighted.ttest.ci <- function(x, weights) {
 } 
 
 # helper function for mover
+# # -----------------------------------------------------------------------
+
 process_data <- function(data, outcome_var, recode_range, group_var, var_label, weight_var = "weight1500") {
   if (is.null(group_var)) {
     return(NULL)
@@ -72,6 +80,20 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
   
   return(processed_data)
 }
+
+# helper for missing country-year by outcome_var
+# # -----------------------------------------------------------------------
+
+get_missing_combinations <- function(data, outcome_var) {
+  data %>%
+    group_by(pais_nam, wave = as.character(as_factor(wave))) %>%
+    summarise(non_na = sum(!is.na(.data[[outcome_var]])), .groups = "drop") %>%
+    filter(non_na == 0)
+}
+
+# # -----------------------------------------------------------------------
+# UI
+# # -----------------------------------------------------------------------
 
 ui <- fluidPage(
   
@@ -205,8 +227,9 @@ ui <- fluidPage(
 
 
 
-
-# Define server logic to plot various variables ----
+# # -----------------------------------------------------------------------
+# SERVER
+# # -----------------------------------------------------------------------
 server <- function(input, output, session) {
   
   # Triggers "go" between server and ui to generate default plots
@@ -318,6 +341,31 @@ server <- function(input, output, session) {
   
   output$selected_values <- eventReactive(input$go, ignoreNULL = FALSE, {
     slider_values()
+  })
+  
+  # WARNING FOR MISSING COMBOS
+  # # -----------------------------------------------------------------------
+  observeEvent(input$go, {
+    missing <- get_missing_combinations(dff(), outcome())
+    
+    if (nrow(missing) > 0) {
+      
+      # Join with country abbreviations
+      missing <- missing %>%
+        left_join(
+          dstrata %>% distinct(pais_nam, pais_lab),
+          by = "pais_nam"
+        ) %>%
+        mutate(
+          combo_label = paste0(pais_lab, wave)  # e.g., BRA2006
+        )
+      
+      showNotification(
+        paste0("Atención: las siguientes combinaciones de país-año no tienen datos para ", outcome(), "\n",
+               paste(missing$combo_label, collapse = ", ")),
+        type = "warning", duration = 30
+      )
+    }
   })
   
   

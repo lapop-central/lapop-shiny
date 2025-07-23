@@ -4,7 +4,12 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(shinyWidgets)
+<<<<<<< Updated upstream
 library(Hmisc, exclude = c("src", "summarize", "format.pval", "units"))
+=======
+library(Hmisc)
+# # -----------------------------------------------------------------------
+>>>>>>> Stashed changes
 
 lapop_fonts()
 
@@ -20,6 +25,8 @@ waves_total = c("2004", "2006", "2008", "2010", "2012", "2014", "2016/17", "2018
 
 
 #helper function for cleaning ts -- handle missing values at end or middle of series
+# # -----------------------------------------------------------------------
+
 omit_na_edges <- function(df) {
   # Find which rows have NA values
   na_rows <- apply(df, 1, function(row) any(is.na(row)))
@@ -34,7 +41,9 @@ omit_na_edges <- function(df) {
   return(df_clean)
 }
 
-#custom weighted averages and CIs, to speed up computational speed vs. survey_mean
+# custom weighted averages and CIs, to speed up computational speed vs. survey_mean
+# # -----------------------------------------------------------------------
+
 weighted.ttest.ci <- function(x, weights) {
   nx <- length(x)
   vx <- Hmisc::wtd.var(x, weights, normwt = TRUE, na.rm = TRUE) ## From Hmisc
@@ -48,15 +57,30 @@ weighted.ttest.ci <- function(x, weights) {
   return(result)
 } 
 
+# helper for missing country-year by outcome_var
+# # -----------------------------------------------------------------------
+
+get_missing_combinations <- function(data, outcome_var) {
+  data %>%
+    group_by(pais_nam, wave = as.character(as_factor(wave))) %>%
+    summarise(non_na = sum(!is.na(.data[[outcome_var]])), .groups = "drop") %>%
+    filter(non_na == 0)
+}
+
+
 # helper function for mover
+# # -----------------------------------------------------------------------
+
 process_data <- function(data, outcome_var, recode_range, group_var, var_label, weight_var = "weight1500") {
-  if (is.null(group_var)) {
-    return(NULL)
-  }
+  if (is.null(group_var)) return(NULL)
+  
+  # Detect and store missing combinations
+  missing_combos <- get_missing_combinations(data, outcome_var)
+  
+  # Proceed with processing
   processed_data <- data %>%
     drop_na(!!sym(outcome_var)) %>%
     mutate(outcome_rec = case_when(
-      is.na(!!sym(outcome_var)) ~ NA_real_,
       !!sym(outcome_var) >= recode_range[1] & !!sym(outcome_var) <= recode_range[2] ~ 100,
       TRUE ~ 0
     )) %>%
@@ -67,10 +91,17 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
       varlabel = var_label,
       proplabel = paste0(round(prop), "%")
     ) %>%
-    drop_na(.)
+    drop_na()
+  
+  # Attach missing info as an attribute (optional for debugging or messaging)
+  attr(processed_data, "missing_combos") <- missing_combos
   
   return(processed_data)
 }
+
+# # -----------------------------------------------------------------------
+# UI
+# # -----------------------------------------------------------------------
 
 ui <- fluidPage(
   
@@ -82,7 +113,12 @@ ui <- fluidPage(
     sidebarPanel(
       width = 3,  # Reduce width (default is 4)
       
+<<<<<<< Updated upstream
       selectInput("variable", "Outcome variable",
+=======
+      selectInput(inputId = "variable", 
+                  label = "Variable",
+>>>>>>> Stashed changes
                   labs[order(names(labs))],
                   selected = "ing4"),
       
@@ -195,7 +231,10 @@ ui <- fluidPage(
   )
 )
 
-# Define server logic to plot various variables ----
+# # -----------------------------------------------------------------------
+# SERVER
+# # -----------------------------------------------------------------------
+
 server <- function(input, output, session) {
   
   # Triggers "go" between server and ui to generate default plots
@@ -311,7 +350,33 @@ server <- function(input, output, session) {
     slider_values()
   })
   
-  # SOURCE INFO WITH PAIS and WAVE
+# WARNING FOR MISSING COMBOS
+# # -----------------------------------------------------------------------
+  observeEvent(input$go, {
+    missing <- get_missing_combinations(dff(), outcome())
+    
+    if (nrow(missing) > 0) {
+      
+      # Join with country abbreviations
+      missing <- missing %>%
+        left_join(
+          dstrata %>% distinct(pais_nam, pais_lab),
+          by = "pais_nam"
+        ) %>%
+        mutate(
+          combo_label = paste0(pais_lab, wave)  # e.g., BRA2006
+        )
+      
+      showNotification(
+        paste0("Attention: the following country-year combinations have no data for ", outcome(), "\n",
+               paste(missing$combo_label, collapse = ", ")),
+        type = "warning", duration = 30
+      )
+    }
+  })
+  
+# SOURCE INFO WITH PAIS and WAVE
+# # -----------------------------------------------------------------------
   source_info_both <- reactive({
     # Get country abbreviations that match selected country names
     pais_abbr <- dstrata %>%
@@ -357,6 +422,8 @@ server <- function(input, output, session) {
   })
   
   #hist 
+  # # -----------------------------------------------------------------------
+  
   # must break into data event, graph event, and renderPlot to get download buttons to work
   histd <- eventReactive(input$go, ignoreNULL = FALSE, {
     hist_df = Error(
@@ -389,6 +456,8 @@ server <- function(input, output, session) {
   
   
   #ts
+  # # -----------------------------------------------------------------------
+  
   tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_ts = Error(
       dff() %>%
@@ -428,6 +497,8 @@ server <- function(input, output, session) {
   })
   
   #cc 
+  # # -----------------------------------------------------------------------
+  
   ccd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_cc = Error(
       dff() %>%
@@ -461,6 +532,9 @@ server <- function(input, output, session) {
   output$cc <- renderPlot({
     return(ccg())
   })
+  
+  # bd
+  # # -----------------------------------------------------------------------
   
   # Use function for each demographic breakdown variable
   secdf <- eventReactive(input$go, ignoreNULL = FALSE, {
@@ -550,7 +624,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # Combine =demographic data frames into one df
+  # Combine demographic data frames into one df
   moverd <- eventReactive(input$go, ignoreNULL = FALSE, {
     dta_mover <- Error(rbind(secdf(), genderdf(), edaddf(), wealthdf(), eddf(), urdf()))
     validate(
@@ -573,8 +647,14 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
+<<<<<<< Updated upstream
   # DOWNLOAD PLOTS
   # # -----------------------------------------------------------------------
+=======
+  # DOWNLOAD SECTION
+  # # -----------------------------------------------------------------------
+  
+>>>>>>> Stashed changes
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),
@@ -690,4 +770,5 @@ server <- function(input, output, session) {
 }
 
 # Launch App
+# # -----------------------------------------------------------------------
 shinyApp(ui, server)
