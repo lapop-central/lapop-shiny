@@ -4,16 +4,8 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(shinyWidgets)
-<<<<<<< Updated upstream
-library(Hmisc, exclude = c("src", "summarize", "format.pval", "units"))
-=======
 library(Hmisc)
 # # -----------------------------------------------------------------------
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-
 lapop_fonts()
 
 dstrata <- readRDS("gm_shiny_data_en.rds")
@@ -116,17 +108,8 @@ ui <- fluidPage(
     sidebarPanel(
       width = 3,  # Reduce width (default is 4)
       
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      selectInput("variable", "Outcome variable",
-=======
       selectInput(inputId = "variable", 
                   label = "Variable",
->>>>>>> Stashed changes
-=======
-      selectInput(inputId = "variable", 
-                  label = "Variable",
->>>>>>> Stashed changes
                   labs[order(names(labs))],
                   selected = "ing4"),
       
@@ -376,11 +359,7 @@ server <- function(input, output, session) {
         )
       
       showNotification(
-<<<<<<< Updated upstream
         paste0("Attention: the following country-year combinations have no data for ", outcome(), "\n",
-=======
-        paste0("Attention: the following country-year combinations have no data for ", outcome(),
->>>>>>> Stashed changes
                paste(missing$combo_label, collapse = ", ")),
         type = "warning", duration = 30
       )
@@ -659,17 +638,10 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
-<<<<<<< Updated upstream
-  # DOWNLOAD PLOTS
   # # -----------------------------------------------------------------------
-=======
   # DOWNLOAD SECTION
   # # -----------------------------------------------------------------------
-  
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),

@@ -361,11 +361,7 @@ server <- function(input, output, session) {
         )
       
       showNotification(
-<<<<<<< Updated upstream
         paste0("Atención: las siguientes combinaciones de país-año no tienen datos para ", outcome(), "\n",
-=======
-        paste0("Atención: las siguientes combinaciones de país-año no tienen datos para ", outcome(),
->>>>>>> Stashed changes
                paste(missing$combo_label, collapse = ", ")),
         type = "warning", duration = 30
       )
