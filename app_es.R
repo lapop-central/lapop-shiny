@@ -5,10 +5,10 @@ library(tidyr)
 library(shiny)
 library(stringr)
 library(shinyWidgets)
+library(bslib)
 library(Hmisc)
 
 # # -----------------------------------------------------------------------
-
 lapop_fonts()
 
 dstrata <- readRDS("gm_shiny_data_es.rds")
@@ -19,7 +19,8 @@ Error<-function(x){
   tryCatch(x,error=function(e) return(FALSE))
 }
 
-waves_total = c("2004", "2006", "2008", "2010", "2012", "2014", "2016/17", "2018/19", "2021", "2023")
+waves_total = c("2004", "2006", "2008", "2010", "2012", "2014", 
+                "2016/17", "2018/19", "2021", "2023")
 
 
 # helper function for cleaning ts -- handle missing values at end or middle of series
@@ -84,13 +85,39 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
 # helper for missing country-year by outcome_var
 # # -----------------------------------------------------------------------
 
-get_missing_combinations <- function(data, outcome_var) {
-  data %>%
-    group_by(pais_nam, wave = as.character(as_factor(wave))) %>%
-    summarise(non_na = sum(!is.na(.data[[outcome_var]])), .groups = "drop") %>%
-    filter(non_na == 0)
+get_missing_combinations <- function(data, outcome_var, wave_var,
+                                     selected_waves, selected_countries) {
+  # Convert wave values to string using haven labels
+  data <- data %>%
+    mutate(wave_str = as.character(haven::as_factor(.data[[wave_var]])))
+  
+  # Build the full country-wave grid
+  all_combos <- expand.grid(
+    pais_nam = selected_countries,
+    wave = selected_waves,
+    stringsAsFactors = FALSE
+  )
+  
+  # Subset only relevant countries
+  data <- data %>%
+    filter(pais_nam %in% selected_countries)
+  
+  # Summarize: how many valid (non-NA and not 0) values exist per combo
+  summary <- data %>%
+    group_by(pais_nam, wave = wave_str) %>%
+    summarise(
+      n_valid = sum(!is.na(.data[[outcome_var]]) & .data[[outcome_var]] != 0),
+      .groups = "drop"
+    )
+  
+  # Merge and detect missing
+  missing <- all_combos %>%
+    left_join(summary, by = c("pais_nam", "wave")) %>%
+    filter(is.na(n_valid) | n_valid == 0) %>%
+    select(pais_nam, wave)
+  
+  return(missing)
 }
-
 # # -----------------------------------------------------------------------
 # UI
 # # -----------------------------------------------------------------------
@@ -151,8 +178,6 @@ ui <- fluidPage(
       # This makes slider input only integers
       tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
       
-      
-      
       pickerInput(inputId = "wave", 
                   label = "Ronda de encuesta",
                   choices = c("2004" = "2004",
@@ -195,8 +220,12 @@ ui <- fluidPage(
                            inline = TRUE)
       ),
       
-      actionButton("go", "Generar")
+      #actionButton("go", "Generate") # Include button in UI
       
+      tags$div(
+        style = "display: none;",
+        actionButton("go", "Generate")
+      )
       
     ),
     
@@ -219,11 +248,13 @@ ui <- fluidPage(
       ),
       br(),
       fluidRow(column(12, "",
+                      uiOutput("missing_warning_card"),
                       downloadButton(outputId = "downloadPlot", label = "Descargar gráfico"),
                       downloadButton(outputId = "downloadTable", label = "Descargar tabla")))
     )
   )
 )
+
 
 
 
@@ -300,42 +331,56 @@ server <- function(input, output, session) {
                 step = 1)
   })
   
+  # Filtering data based on user's selection (dff)
   dff <- eventReactive(input$go, ignoreNULL = FALSE, {
     dstrata %>%
       filter(as_factor(wave) %in% input$wave) %>%
       filter(pais_nam %in% input$pais)
   })  
   
+  # Rendering var caption based on user's var selection
   cap <- renderText({
-    vars_labels$question_short_es[which(vars_labels$column_name == formulaText())]
+    vars_labels$question_short_en[which(vars_labels$column_name == formulaText())]
   })
   
   output$caption <- eventReactive(input$go, ignoreNULL = FALSE, {
     cap() 
   })
   
+  # Rendering variable code + wording based on user's var selection
   word <- renderText({
     paste0(toupper(vars_labels$column_name[which(vars_labels$column_name == formulaText())]), ". ",
-           vars_labels$question_es[which(vars_labels$column_name == formulaText())])
+           vars_labels$question_en[which(vars_labels$column_name == formulaText())])
   })
   
   output$wording <- eventReactive(input$go, ignoreNULL = FALSE, {
     word() 
   })
   
+  # Rendering ROs based on user's var selection
   resp <- renderText({
-    vars_labels$responses_es_rec[which(vars_labels$column_name == formulaText())]
+    vars_labels$responses_en_rec[which(vars_labels$column_name == formulaText())]
   })
   
   output$response <- eventReactive(input$go, ignoreNULL = FALSE, {
     resp() 
   })
   
+  # Rendering variable_sec ROs
+  resp_sec <- renderText({
+    vars_labels$responses_en_rec[which(vars_labels$column_name == input$variable_sec)]
+  })
+  
+  output$response_sec <- eventReactive(input$go, ignoreNULL = FALSE, {
+    resp_sec()
+  })
+  
+  # Rendering User selected recode value(s)
   slider_values <- renderText({
     if(input$recode[1] == input$recode[2]) {
-      paste0("(valor: ", unique(input$recode), ")")
+      paste0("(value: ", unique(input$recode), ")")
     } else {
-      paste0("(rango: ", paste(input$recode, collapse = " a "), ")")
+      paste0("(range: ", paste(input$recode, collapse = " to "), ")")
     }
   })
   
@@ -345,29 +390,57 @@ server <- function(input, output, session) {
   
   # WARNING FOR MISSING COMBOS
   # # -----------------------------------------------------------------------
-  observeEvent(input$go, {
-    missing <- get_missing_combinations(dff(), outcome())
+  output$missing_warning_card <- renderUI({
+    req(input$go > 0, input$wave, input$pais)
     
-    if (nrow(missing) > 0) {
-      
-      # Join with country abbreviations
-      missing <- missing %>%
-        left_join(
-          dstrata %>% distinct(pais_nam, pais_lab),
-          by = "pais_nam"
-        ) %>%
-        mutate(
-          combo_label = paste0(pais_lab, wave)  # e.g., BRA2006
-        )
-      
-      showNotification(
-        paste0("Atención: las siguientes combinaciones de país-año no tienen datos para ", outcome(), "\n",
-               paste(missing$combo_label, collapse = ", ")),
-        type = "warning", duration = 30
-      )
-    }
+    # Normalize wave and country inputs
+    selected_waves <- as.character(input$wave)
+    selected_countries <- as.character(input$pais)
+    
+    # Step 1: Compute missing combinations
+    missing <- get_missing_combinations(
+      data = dff(),
+      outcome_var = outcome(),
+      wave_var = "wave",
+      selected_waves = selected_waves,
+      selected_countries = selected_countries
+    )
+    
+    # Step 2: Skip if none missing
+    if (nrow(missing) == 0) return(NULL)
+    
+    # Add country abbreviations
+    missing <- missing %>%
+      left_join(dstrata %>% distinct(pais_nam, pais_lab), by = "pais_nam")
+    
+    # Format message YEAR: COUNTRIES
+    warning_text <- missing %>%
+      group_by(wave) %>%
+      summarise(
+        country_list = paste(sort(unique(pais_lab)), collapse = ", "),
+        .groups = "drop"
+      ) %>%
+      mutate(combo_label = paste0("<b>", wave, "</b>: ", country_list)) %>%
+      pull(combo_label) %>%
+      paste(collapse = "<br>")
+    
+    # Display warning card
+    tags$div(
+      style = "
+      border: 2px solid #ffc107;
+      border-radius: 8px;
+      padding: 15px;
+      background-color: #fff8e1;
+      margin-bottom: 20px;
+      max-height: 120px;
+      overflow-y: auto;
+      ",
+      HTML(paste0(
+        "<span style='font-size:16px; color: #856404;'>⚠️ <b>Attención:</b> las siguientes combinaciones de país-año no tienen datos para <b>",
+        outcome(), "</b>:<br>", warning_text
+      ))
+    )
   })
-  
   
   # SOURCE INFO WITH PAIS and WAVE
   # # -----------------------------------------------------------------------
@@ -423,7 +496,7 @@ server <- function(input, output, session) {
   # HISTOGRAM
   # # -----------------------------------------------------------------------
   # must break into data event, graph event, and renderPlot to get download buttons to work
-  histd <- eventReactive(input$go, ignoreNULL = FALSE, {
+  histd <- reactive({
     hist_df = Error(
       dff() %>%
         group_by(across(outcome())) %>%
@@ -441,7 +514,7 @@ server <- function(input, output, session) {
   })
   
   
-  histg <- eventReactive(input$go, ignoreNULL = FALSE, {
+  histg <- reactive({
     histg <- lapop_hist(histd(), 
                         ymax = ifelse(any(histd()$prop > 90), 110, 100), 
                         lang = "es",
@@ -454,9 +527,9 @@ server <- function(input, output, session) {
   })
   
   
-  # TIME SERIES
+  # TIME-SERIES
   # # -----------------------------------------------------------------------
-  tsd <- eventReactive(input$go, ignoreNULL = FALSE, {
+  tsd <- reactive({
     dta_ts = Error(
       dff() %>%
         drop_na(outcome()) %>%
@@ -476,16 +549,15 @@ server <- function(input, output, session) {
     validate(
       need(dta_ts, "Error: no hay datos disponibles. Verifique que esta pregunta se haya realizado en esta combinación de país/año.")
     )
-    dta_ts = merge(dta_ts, data.frame(wave = waves_total), by = "wave", all.y = TRUE)
+    dta_ts = merge(dta_ts, data.frame(wave = as.character(waves_total), empty = 1), by = "wave", all.y = TRUE)
     return(omit_na_edges(dta_ts))
   })
   
-  tsg <- eventReactive(input$go, ignoreNULL = FALSE, {
+  tsg <- reactive({
     tsg = lapop_ts(tsd(), 
                    ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                    label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                   source_info = source_info_pais(),
-                   lang = "es",
+                   source_info = source_info_pais(), lang = "es",
                    subtitle = "% en la categoría seleccionada")
     return(tsg)
   })
@@ -497,7 +569,7 @@ server <- function(input, output, session) {
   
   # CROSS COUNTRY
   # # -----------------------------------------------------------------------
-  ccd <- eventReactive(input$go, ignoreNULL = FALSE, {
+  ccd <- reactive({
     dta_cc = Error(
       dff() %>%
         drop_na(outcome()) %>%
@@ -519,12 +591,11 @@ server <- function(input, output, session) {
     return(dta_cc)
   })
   
-  ccg <- eventReactive(input$go, ignoreNULL = FALSE, {
+  ccg <- reactive({
     ccg = lapop_cc(ccd(), sort = "hi-lo", 
                    subtitle = "% en la categoría seleccionada",
                    ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                   lang = "es",
-                   source_info = source_info_wave())
+                   lang = "es", source_info = source_info_wave())
     return(ccg)
   })
   
@@ -532,9 +603,11 @@ server <- function(input, output, session) {
     return(ccg())
   })
   
-  # BREAK DOWN Use function for each demographic Desglose variable
+  # BREAK DOWN
   # # -----------------------------------------------------------------------
-  secdf <- eventReactive(input$go, ignoreNULL = FALSE, {
+  # Use function for each demographic Desglose variable
+  
+  secdf <- reactive({
     if (input$variable_sec == "None") {
       NULL
     }  else if (variable_sec() == outcome()) {
@@ -552,7 +625,7 @@ server <- function(input, output, session) {
     }
   })
   
-  genderdf <- eventReactive(input$go, ignoreNULL = FALSE, {
+  genderdf <- reactive({
     if ("gendermc" %in% input$demog) {
       process_data(
         data = dff(),
@@ -566,7 +639,7 @@ server <- function(input, output, session) {
     }
   })
   
-  wealthdf <- eventReactive(input$go, ignoreNULL = FALSE, {
+  wealthdf <- reactive({
     if ("wealth" %in% input$demog) {
       process_data(
         data = dff(),
@@ -580,7 +653,7 @@ server <- function(input, output, session) {
     }
   })
   
-  eddf <- eventReactive(input$go, ignoreNULL = FALSE, {
+  eddf <- reactive({
     if ("edre" %in% input$demog) {
       process_data(
         data = dff(),
@@ -594,7 +667,7 @@ server <- function(input, output, session) {
     }
   })
   
-  edaddf <- eventReactive(input$go, ignoreNULL = FALSE, {
+  edaddf <- reactive({ 
     if ("edad" %in% input$demog) {
       process_data(
         data = dff(),
@@ -608,7 +681,7 @@ server <- function(input, output, session) {
     }
   })
   
-  urdf <- eventReactive(input$go, ignoreNULL = FALSE, {
+  urdf <- reactive({
     if ("ur" %in% input$demog) {
       process_data(
         data = dff(),
@@ -623,7 +696,7 @@ server <- function(input, output, session) {
   })
   
   # Combine demographic data frames into one df
-  moverd <- eventReactive(input$go, ignoreNULL = FALSE, {
+  moverd <- reactive({
     dta_mover <- Error(rbind(secdf(), genderdf(), edaddf(), wealthdf(), eddf(), urdf()))
     validate(
       need(dta_mover, "Error: no hay datos disponibles. Verifique que esta pregunta se haya realizado en esta combinación de país/año.")
@@ -632,13 +705,12 @@ server <- function(input, output, session) {
     return(dta_mover)
   })
   
-  moverg <- eventReactive(input$go, ignoreNULL = FALSE, {
+  moverg <- reactive({
     moverg <- lapop_mover(moverd(), 
                           subtitle = "% en la categoría seleccionada", 
                           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-                          lang = "es",
-                          source_info = source_info_both())
+                          lang = "es", source_info = source_info_both())
     return(moverg)
   })
   
@@ -646,6 +718,7 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
+  # -------------------------------------------------------------------------
   # DOWNLOAD SECTION
   # -------------------------------------------------------------------------
   output$downloadPlot <- downloadHandler(
@@ -676,15 +749,6 @@ server <- function(input, output, session) {
         title_text <- isolate(cap())
         subtitle_text <- slider_values()
         
-        # Check for single time period
-        #if(any(table(tsd()$wave) == 1)) {
-          #showNotification(
-           # "Advertencia: su selección incluye solo una serie temporal",
-            #type = "warning",
-            #duration = 5
-          #)
-        #}
-        
         ts_to_save <-  lapop_ts(tsd(),
                                 main_title = title_text,
                                 subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
@@ -706,8 +770,7 @@ server <- function(input, output, session) {
                                main_title = title_text,
                                subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
                                ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                               lang = "es",
-                               source_info = paste0(source_info_wave(), "\n\n", 
+                               lang = "es", source_info = paste0(source_info_wave(), "\n\n", 
                                                     str_wrap(paste0(word(), " ", resp()), 125))
         )
         
@@ -724,8 +787,7 @@ server <- function(input, output, session) {
           subtitle = paste0("% en la categoría seleccionada ", subtitle_text),
           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-          lang = "es",
-          source_info = paste0(source_info_both(), "\n\n", 
+          lang = "es", source_info = paste0(source_info_both(), "\n\n", 
                                str_wrap(paste0(word(), " ", resp()), 125))
         )
         
@@ -735,7 +797,9 @@ server <- function(input, output, session) {
     }
   )
   
-  
+  # # -----------------------------------------------------------------------
+  # DOWNLOAD TABLE
+  # # -----------------------------------------------------------------------
   output$downloadTable <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".csv"),
@@ -747,12 +811,15 @@ server <- function(input, output, session) {
       if(input$tabs == "Histograma") {
         write.csv(histd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
+        
       } else if (input$tabs == "Serie temporal") {
         write.csv(tsd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
+        
       } else if (input$tabs == "Comparativo") {
         write.csv(ccd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
+        
       } else {
         write.csv(moverd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
@@ -761,4 +828,10 @@ server <- function(input, output, session) {
   )
 }
 
+# RUN APP
+# # -----------------------------------------------------------------------
 shinyApp(ui, server)
+
+# # -----------------------------------------------------------------------
+# END
+# # -----------------------------------------------------------------------
