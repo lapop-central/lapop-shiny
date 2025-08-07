@@ -63,6 +63,7 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
   if (is.null(group_var)) {
     return(NULL)
   }
+  # Proceed with processing
   processed_data <- data %>%
     drop_na(!!sym(outcome_var)) %>%
     mutate(outcome_rec = case_when(
@@ -725,7 +726,8 @@ server <- function(input, output, session) {
     filename = function(file) {
       ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".svg"),
              ifelse(input$tabs == "Serie temporal",  paste0("ts_", outcome(),".svg"),
-                    ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
+                    ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".svg"),  
+                           paste0("mover_", outcome(),".svg"))))
     },
     
     content = function(file) {

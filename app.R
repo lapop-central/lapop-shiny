@@ -56,6 +56,33 @@ weighted.ttest.ci <- function(x, weights) {
   return(result)
 } 
 
+# helper function for mover
+# # -----------------------------------------------------------------------
+
+process_data <- function(data, outcome_var, recode_range, group_var, var_label, weight_var = "weight1500") {
+  if (is.null(group_var)) {
+    return(NULL)
+  }  
+  # Proceed with processing
+  processed_data <- data %>%
+    drop_na(!!sym(outcome_var)) %>%
+    mutate(outcome_rec = case_when(
+      is.na(!!sym(outcome_var)) ~ NA_real_,
+      !!sym(outcome_var) >= recode_range[1] & !!sym(outcome_var) <= recode_range[2] ~ 100,
+      TRUE ~ 0
+    )) %>%
+    group_by(vallabel = haven::as_factor(zap_missing(!!sym(group_var)))) %>%
+    summarise_at(vars("outcome_rec"), list(~weighted.ttest.ci(., !!sym(weight_var)))) %>%
+    unnest_wider(col = "outcome_rec") %>%
+    mutate(
+      varlabel = var_label,
+      proplabel = paste0(round(prop), "%")
+    ) %>%
+    drop_na(.)
+  
+  return(processed_data)
+}
+
 # helper for missing country-year by outcome_var
 # # -----------------------------------------------------------------------
 get_missing_combinations <- function(data, outcome_var, wave_var,
@@ -92,37 +119,6 @@ get_missing_combinations <- function(data, outcome_var, wave_var,
   return(missing)
 }
 
-
-# helper function for mover
-# # -----------------------------------------------------------------------
-
-process_data <- function(data, outcome_var, recode_range, group_var, var_label, weight_var = "weight1500") {
-  if (is.null(group_var)) return(NULL)
-  
-  # Detect and store missing combinations
-  missing_combos <- get_missing_combinations(data, outcome_var)
-  
-  # Proceed with processing
-  processed_data <- data %>%
-    drop_na(!!sym(outcome_var)) %>%
-    mutate(outcome_rec = case_when(
-      !!sym(outcome_var) >= recode_range[1] & !!sym(outcome_var) <= recode_range[2] ~ 100,
-      TRUE ~ 0
-    )) %>%
-    group_by(vallabel = haven::as_factor(zap_missing(!!sym(group_var)))) %>%
-    summarise_at(vars("outcome_rec"), list(~weighted.ttest.ci(., !!sym(weight_var)))) %>%
-    unnest_wider(col = "outcome_rec") %>%
-    mutate(
-      varlabel = var_label,
-      proplabel = paste0(round(prop), "%")
-    ) %>%
-    drop_na()
-  
-  # Attach missing info as an attribute (optional for debugging or messaging)
-  attr(processed_data, "missing_combos") <- missing_combos
-  
-  return(processed_data)
-}
 
 # # -----------------------------------------------------------------------
 # UI
@@ -343,7 +339,7 @@ server <- function(input, output, session) {
     vars_labels$question_short_en[which(vars_labels$column_name == formulaText())]
   })
   
-  output$caption <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$caption <- renderText({
     cap() 
   })
   
@@ -353,7 +349,7 @@ server <- function(input, output, session) {
     vars_labels$question_en[which(vars_labels$column_name == formulaText())])
   })
   
-  output$wording <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$wording <- renderText({
     word() 
   })
   
@@ -362,7 +358,7 @@ server <- function(input, output, session) {
     vars_labels$responses_en_rec[which(vars_labels$column_name == formulaText())]
   })
   
-  output$response <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$response <- renderText({
     resp() 
   })
   
@@ -371,7 +367,7 @@ server <- function(input, output, session) {
     vars_labels$responses_en_rec[which(vars_labels$column_name == input$variable_sec)]
   })
   
-  output$response_sec <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$response_sec <- renderText({
     resp_sec()
   })
   
@@ -384,7 +380,7 @@ server <- function(input, output, session) {
     }
   })
   
-  output$selected_values <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$selected_values <- renderText({
     slider_values()
   })
   
@@ -611,7 +607,7 @@ server <- function(input, output, session) {
     if (input$variable_sec == "None") {
       NULL
     }  else if (variable_sec() == outcome()) {
-      showNotification("You cannot break down the outcome variable by itself.", 
+      showNotification("❌ Error: You cannot break down the outcome variable by itself.", 
                        type = "error")
       NULL
     } else {
@@ -710,7 +706,7 @@ server <- function(input, output, session) {
                           subtitle = "% in selected category", 
                           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-                          source_info = source_info_both())
+                          lang = "en", source_info = source_info_both())
     return(moverg)
   })
   
@@ -721,12 +717,12 @@ server <- function(input, output, session) {
   # # -----------------------------------------------------------------------
   # DOWNLOAD SECTION
   # # -----------------------------------------------------------------------
-
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),
              ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(),".svg"),
-                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(),".svg"),  paste0("mover_", outcome(),".svg"))))
+                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(),".svg"),  
+                           paste0("mover_", outcome(),".svg"))))
     },
     
     content = function(file) {
