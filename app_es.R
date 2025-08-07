@@ -340,38 +340,38 @@ server <- function(input, output, session) {
   
   # Rendering var caption based on user's var selection
   cap <- renderText({
-    vars_labels$question_short_en[which(vars_labels$column_name == formulaText())]
+    vars_labels$question_short_es[which(vars_labels$column_name == formulaText())]
   })
   
-  output$caption <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$caption <- renderText({
     cap() 
   })
   
   # Rendering variable code + wording based on user's var selection
   word <- renderText({
     paste0(toupper(vars_labels$column_name[which(vars_labels$column_name == formulaText())]), ". ",
-           vars_labels$question_en[which(vars_labels$column_name == formulaText())])
+           vars_labels$question_es[which(vars_labels$column_name == formulaText())])
   })
   
-  output$wording <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$wording <- renderText({
     word() 
   })
   
   # Rendering ROs based on user's var selection
   resp <- renderText({
-    vars_labels$responses_en_rec[which(vars_labels$column_name == formulaText())]
+    vars_labels$responses_es_rec[which(vars_labels$column_name == formulaText())]
   })
   
-  output$response <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$response <- renderText({
     resp() 
   })
   
   # Rendering variable_sec ROs
   resp_sec <- renderText({
-    vars_labels$responses_en_rec[which(vars_labels$column_name == input$variable_sec)]
+    vars_labels$responses_es_rec[which(vars_labels$column_name == input$variable_sec)]
   })
   
-  output$response_sec <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$response_sec <- renderText({
     resp_sec()
   })
   
@@ -384,7 +384,7 @@ server <- function(input, output, session) {
     }
   })
   
-  output$selected_values <- eventReactive(input$go, ignoreNULL = FALSE, {
+  output$selected_values <- renderText({
     slider_values()
   })
   
@@ -611,7 +611,7 @@ server <- function(input, output, session) {
     if (input$variable_sec == "None") {
       NULL
     }  else if (variable_sec() == outcome()) {
-      showNotification("No se puede desglosar la variable resultado por sí misma", 
+      showNotification("❌ Error: No se puede desglosar la variable resultado por sí misma", 
                        type = "error")
       NULL
     } else {
