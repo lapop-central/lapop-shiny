@@ -10,7 +10,7 @@ esp <- TRUE
 
 # Read in RAW grand merge (gm) data created from Stata do file
 # # -----------------------------------------------------------------------
-path <- "C:/Users/rob/Box/Rob LAPOP/data/" # adjust your filepath here
+path <- "C:/Users/vidigar/Box/Rob LAPOP/data/" # adjust your filepath here
 gm <- haven::read_dta(paste0(path, "gm_", ifelse(esp, "es", "en"), ".dta"))
 
 pais_lab <- read.csv("Data Preprocessing/pais_lab.csv")
