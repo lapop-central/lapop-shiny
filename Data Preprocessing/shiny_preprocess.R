@@ -159,6 +159,8 @@ vars <- c(
   "pais",
   "year",
   "estratopri",
+  "strata",
+  "upm",
   "wave",
   "pais_nam",
   "pais_lab",

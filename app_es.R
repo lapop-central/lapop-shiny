@@ -1,12 +1,14 @@
-library(lapop)
-library(haven)
-library(dplyr)
-library(tidyr)
-library(shiny)
-library(stringr)
-library(shinyWidgets)
-library(bslib)
-library(Hmisc)
+suppressPackageStartupMessages({
+  library(lapop)
+  library(haven)
+  library(dplyr)
+  library(tidyr)
+  library(shiny)
+  library(stringr)
+  library(shinyWidgets)
+  library(bslib)
+  library(Hmisc)
+})
 
 # # -----------------------------------------------------------------------
 lapop_fonts()
@@ -201,10 +203,12 @@ ui <- fluidPage(
       
       # show recode slider only for time series, cc, and breakdown (not hist)
       conditionalPanel(
-        'input.tabs == "Serie temporal" | input.tabs == "Comparativo" | input.tabs == "Desglose"',
+        'input.tabs == "Serie temporal" | 
+        input.tabs == "Comparativo" | 
+        input.tabs == "Desglose" |
+        input.tabs == "Mapa"',
         uiOutput("sliderUI"),
       ),
-      
       
       conditionalPanel(
         'input.tabs == "Desglose"',
@@ -245,7 +249,9 @@ ui <- fluidPage(
                   
                   tabPanel("Comparativo", plotOutput("cc")),
                   
-                  tabPanel("Desglose", plotOutput("mover"))
+                  tabPanel("Desglose", plotOutput("mover")),
+                  
+                  tabPanel("Mapa", plotOutput("map"))
       ),
       br(),
       fluidRow(column(12, "",
@@ -719,15 +725,84 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
+  # World Map
+  # # -----------------------------------------------------------------------
+  mapd <- reactive({
+    
+    req(input$wave)
+    req(outcome())
+    
+    # Allow only one wave
+    validate(
+      need(
+        length(input$wave) == 1,
+        "Por favor selecionar solo UNA combinación de año/ola para produzir el mapa."
+      )
+    )
+    
+    var_sel <- outcome()
+    rec_min <- input$recode[1]
+    rec_max <- input$recode[2]
+    
+    dta_map <- dff() %>%
+      
+      # Create binary indicator (100 = within range, 0 = outside)
+      mutate(
+        outcome_rec = ifelse(
+          .data[[var_sel]] >= rec_min &
+            .data[[var_sel]] <= rec_max,
+          100, 0
+        )
+      ) %>%
+      
+      # Aggregate by country
+      group_by(pais_lab) %>%
+      
+      # Compute percent in range
+      summarise(
+        value = mean(outcome_rec, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      
+      # Remove countries with no valid data
+      filter(!is.na(value) & value > 0)
+    
+    validate(
+      need(
+        nrow(dta_map) > 0,
+        "Error: no hay datos disponibles para esta combinación de país/año."
+      )
+    )
+    
+    return(dta_map)
+  })
+  
+  mapg <- reactive({
+    lapop_map(
+      mapd(),
+      survey = "AmericasBarometer",
+      source_info = "\nFuente: LAPOP Lab, Barómetro de las Américas Data Playground"
+    )
+  })
+  
+  
+  output$map <- renderPlot({
+    mapg()
+  })
+  
   # -------------------------------------------------------------------------
   # DOWNLOAD SECTION
   # -------------------------------------------------------------------------
+  
+  # Download Plot
+  # # -----------------------------------------------------------------------
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".svg"),
              ifelse(input$tabs == "Serie temporal",  paste0("ts_", outcome(),".svg"),
-                    ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".svg"),  
-                           paste0("mover_", outcome(),".svg"))))
+                    ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".svg"),
+                           ifelse(input$tabs == "Mapa",  paste0("map_", outcome(),".svg"),  
+                           paste0("mover_", outcome(),".svg")))))
     },
     
     content = function(file) {
@@ -779,6 +854,20 @@ server <- function(input, output, session) {
         lapop_save(cc_to_save, file)
         showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
         
+      } else if (input$tabs == "Mapa") {
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        map_to_save <- lapop_map(mapd(),
+                                 main_title = title_text,
+                                 subtitle = paste0("% in selected category ", subtitle_text),
+                                 source_info = paste0("\n", source_info_both()),
+                                 survey = "AmericasBarometer"
+        )
+        
+        lapop_save(map_to_save, file)
+        showNotification(HTML("Descarga de figura completada ✓ "), type = "message")
+        
       } else {
         title_text <- isolate(cap())
         subtitle_text <- slider_values()
@@ -799,15 +888,15 @@ server <- function(input, output, session) {
     }
   )
   
-  # # -----------------------------------------------------------------------
-  # DOWNLOAD TABLE
+  # Download Table
   # # -----------------------------------------------------------------------
   output$downloadTable <- downloadHandler(
     filename = function(file) {
       ifelse(input$tabs == "Histograma",  paste0("hist_", outcome(),".csv"),
              ifelse(input$tabs == "Serie temporal",  paste0("ts_", outcome(),".csv"),
                     ifelse(input$tabs == "Comparativo",  paste0("cc_", outcome(),".csv"),  
-                           paste0("mover_", outcome(),".csv"))))
+                           ifelse(input$tabs == "Mapa",  paste0("map_", outcome(),".csv"),  
+                           paste0("mover_", outcome(),".csv")))))
     },
     content = function(file) {
       if(input$tabs == "Histograma") {
@@ -821,6 +910,10 @@ server <- function(input, output, session) {
       } else if (input$tabs == "Comparativo") {
         write.csv(ccd(), file, row.names=F)
         showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
+        
+      } else if (input$tabs == "Mapa") {
+          write.csv(ccd(), file, row.names=F)
+          showNotification(HTML("Descarga de archivo completada ✓ "), type = "message")
         
       } else {
         write.csv(moverd(), file, row.names=F)

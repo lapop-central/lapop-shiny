@@ -1,12 +1,14 @@
-library(lapop)
-library(haven)
-library(dplyr)
-library(tidyr)
-library(shiny)
-library(stringr)
-library(shinyWidgets)
-library(bslib)
-library(Hmisc)
+suppressPackageStartupMessages({
+  library(lapop)
+  library(haven)
+  library(dplyr)
+  library(tidyr)
+  library(shiny)
+  library(stringr)
+  library(shinyWidgets)
+  library(bslib)
+  library(Hmisc)
+})
 
 # # -----------------------------------------------------------------------
 lapop_fonts()
@@ -22,8 +24,7 @@ Error<-function(x){
 waves_total = c("2004", "2006", "2008", "2010", "2012", "2014", 
                 "2016/17", "2018/19", "2021", "2023")
 
-
-#helper function for cleaning ts -- handle missing values at end or middle of series
+# helper for cleaning ts - handle missing values at end or middle of series
 # # -----------------------------------------------------------------------
 
 omit_na_edges <- function(df) {
@@ -44,17 +45,46 @@ omit_na_edges <- function(df) {
 # # -----------------------------------------------------------------------
 
 weighted.ttest.ci <- function(x, weights) {
+  
+  strata <- get("strata", envir = parent.frame())
+  
+  # Remove NAs
+  valid <- !is.na(x) & !is.na(weights) & !is.na(strata)
+  x       <- x[valid]
+  weights <- weights[valid]
+  strata  <- strata[valid]
+  
   nx <- length(x)
-  vx <- Hmisc::wtd.var(x, weights, normwt = TRUE, na.rm = TRUE) ## From Hmisc
+  
+  # Overall weighted mean
   mx <- weighted.mean(x, weights, na.rm = TRUE)
-  stderr <- sqrt(vx/nx)
-  tstat <- mx/stderr ## not mx - mu
-  cint <- qt(1 - 0.05/2, nx - 1)
-  cint <- tstat + c(-cint, cint)
-  confint = cint * stderr
-  result = data.frame(prop = mx, lb = confint[1], ub = confint[2])
+  
+  # Stratified variance
+  strata_list <- unique(strata)
+  
+  strat_var <- sapply(strata_list, function(s) {
+    idx   <- strata == s
+    x_s   <- x[idx]
+    w_s   <- weights[idx]
+    n_s   <- length(x_s)
+    W_s   <- sum(w_s) / sum(weights)
+    var_s <- Hmisc::wtd.var(x_s, w_s, normwt = TRUE, na.rm = TRUE)
+    return(W_s^2 * var_s / n_s)
+  })
+  
+  vx     <- sum(strat_var)
+  stderr <- sqrt(vx)
+  
+  df    <- nx - length(strata_list)
+  tstat <- mx / stderr
+  cint  <- qt(1 - 0.05/2, df)
+  cint  <- tstat + c(-cint, cint)
+  confint <- cint * stderr
+  
+  result <- data.frame(prop = mx, lb = confint[1], ub = confint[2])
   return(result)
-} 
+}
+
 
 # helper function for mover
 # # -----------------------------------------------------------------------
@@ -199,7 +229,10 @@ ui <- fluidPage(
       
       # Show recode slider only for time series, cc, and breakdown (not hist)
       conditionalPanel(
-        'input.tabs == "Time Series" | input.tabs == "Cross Country" | input.tabs == "Breakdown"',
+        'input.tabs == "Time Series" | 
+        input.tabs == "Cross Country" | 
+        input.tabs == "Breakdown" | 
+        input.tabs == "World Map"',
         uiOutput("sliderUI"),
       ),
       
@@ -243,7 +276,9 @@ ui <- fluidPage(
                   
                   tabPanel("Cross Country", plotOutput("cc")),
                   
-                  tabPanel("Breakdown", plotOutput("mover"))
+                  tabPanel("Breakdown", plotOutput("mover")),
+
+                  tabPanel("World Map", plotOutput("map"))
       ),
       br(),
       fluidRow(column(12, "",
@@ -714,67 +749,153 @@ server <- function(input, output, session) {
     return(moverg())
   })
   
+  # World Map
+  # # -----------------------------------------------------------------------
+  mapd <- reactive({
+    
+    req(input$wave)
+    req(outcome())
+    
+    # Allow only one wave
+    validate(
+      need(
+        length(input$wave) == 1,
+        "Please select only ONE wave/year to display a map."
+      )
+    )
+    
+    var_sel <- outcome()
+    rec_min <- input$recode[1]
+    rec_max <- input$recode[2]
+    
+    dta_map <- dff() %>%
+      
+      # Create binary indicator (100 = within range, 0 = outside)
+      mutate(
+        outcome_rec = ifelse(
+          .data[[var_sel]] >= rec_min &
+            .data[[var_sel]] <= rec_max,
+          100, 0
+        )
+      ) %>%
+      
+      # Aggregate by country
+      group_by(pais_lab) %>%
+      
+      # Compute percent in range
+      summarise(
+        value = mean(outcome_rec, na.rm = TRUE),
+        .groups = "drop"
+      ) %>%
+      
+      # Remove countries with no valid data
+      filter(!is.na(value) & value > 0)
+    
+    validate(
+      need(
+        nrow(dta_map) > 0,
+        "Error: no map data available for this country/year selection."
+      )
+    )
+    
+    return(dta_map)
+  })
+  
+  
+  
+  mapg <- reactive({
+    lapop_map(
+      mapd(),
+      survey = "AmericasBarometer",
+      source_info = "\nSource: LAPOP Lab, AmericasBarometer Data Playground"
+    )
+  })
+  
+  
+  output$map <- renderPlot({
+    mapg()
+  })
+  
   # # -----------------------------------------------------------------------
   # DOWNLOAD SECTION
   # # -----------------------------------------------------------------------
+  
+  # Download Plot
+  # # -----------------------------------------------------------------------
   output$downloadPlot <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".svg"),
-             ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(),".svg"),
-                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(),".svg"),  
-                           paste0("mover_", outcome(),".svg"))))
+      
+      ifelse(input$tabs == "Histogram", paste0("hist_", outcome(), ".svg"),
+             ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(), ".svg"),
+                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(), ".svg"),
+                           ifelse(input$tabs == "World Map",  paste0("map_", outcome(), ".svg"),
+                                  paste0("mover_", outcome(), ".svg"))))) # Add plot type to file export
     },
     
     content = function(file) {
+      
       if(input$tabs == "Histogram") {
         title_text <- isolate(cap())
-        subtitle_text <- slider_values()
+        word_text <- isolate(word())
         
         hist_to_save <- lapop_hist(histd(),
                                    main_title = title_text,
                                    subtitle = "% in selected category ",
-                                   ymax = ifelse(any(histd()$prop > 90), 110, 100), 
-                                   source_info = paste0(source_info_both(), "\n\n", 
-                                                        str_wrap(paste0(word(), " ", resp()), 125))
+                                   ymax = ifelse(any(histd()$prop > 90), 110, 100),
+                                   source_info = source_info_both()
         )
         
         lapop_save(hist_to_save, file)
-        showNotification(HTML("Plot download complete ✓ "), type = "message")
+        showNotification(HTML("Histogram plot download complete ✓ "), type = "message")
         
       } else if (input$tabs == "Time Series") {
         title_text <- isolate(cap())
         subtitle_text <- slider_values()
-
+        
         ts_to_save <-  lapop_ts(tsd(),
                                 main_title = title_text,
                                 subtitle = paste0("% in selected category ", subtitle_text),
                                 ymax = ifelse(any(tsd()$prop > 88, na.rm = TRUE), 110, 100),
                                 label_vjust = ifelse(any(tsd()$prop > 80, na.rm = TRUE), -1.1, -1.5),
-                                source_info = paste0(source_info_pais(), "\n\n", 
-                                                     str_wrap(paste0(word(), " ", resp()), 125))
+                                source_info = source_info_pais()
         )
         
         lapop_save(ts_to_save, file)
-        showNotification(HTML("Plot download complete ✓ "), type = "message")
+        showNotification(HTML("Time series plot download complete ✓ "), type = "message")
         
       } else if (input$tabs == "Cross Country") {
         title_text <- isolate(cap())
         subtitle_text <- slider_values()
         
-        cc_to_save <- lapop_cc(ccd(), sort = "hi-lo", 
+        cc_to_save <- lapop_cc(ccd(), sort = "hi-lo",
                                main_title = title_text,
                                subtitle = paste0("% in selected category ", subtitle_text),
                                ymax = ifelse(any(ccd()$prop > 90, na.rm = TRUE), 110, 100),
-                               source_info = paste0(source_info_wave(), "\n\n", 
-                                                    str_wrap(paste0(word(), " ", resp()), 125))
+                               label_angle = 90,
+                               source_info = source_info_wave()
         )
         
         lapop_save(cc_to_save, file)
-        showNotification(HTML("Plot download complete ✓ "), type = "message")
+        showNotification(HTML("Cross country plot download complete ✓ "), type = "message")
+        
+      } else if (input$tabs == "World Map") {
+        title_text <- isolate(cap())
+        subtitle_text <- slider_values()
+        
+        map_to_save <- lapop_map(mapd(),
+                                 main_title = title_text,
+                                 subtitle = paste0("% in selected category ", subtitle_text),
+                                 source_info = paste0("\n", source_info_both()),
+                                 survey = "AmericasBarometer"
+        )
+        
+        lapop_save(map_to_save, file)
+        showNotification(HTML("Map plot download complete ✓ "), type = "message")
         
       } else {
         title_text <- isolate(cap())
         subtitle_text <- slider_values()
+        word_text <- isolate(word())
         
         mover_to_save <- lapop_mover(
           moverd(),
@@ -782,43 +903,53 @@ server <- function(input, output, session) {
           subtitle = paste0("% in selected category ", subtitle_text),
           ymax = ifelse(any(moverd()$prop > 90, na.rm = TRUE), 119,
                         ifelse(any(moverd()$prop > 80, na.rm = TRUE), 109, 100)),
-          source_info = paste0(source_info_both(), "\n\n", 
-                               str_wrap(paste0(word(), " ", resp()), 125))
+          source_info = source_info_both()
         )
         
         lapop_save(mover_to_save, file)
-        showNotification(HTML("Plot download complete ✓ "), type = "message")
+        showNotification(HTML("Break down plot download complete ✓ "), type = "message")
         
       }
     }
   )
   
-  # # -----------------------------------------------------------------------
-  # DOWNLOAD TABLE
-  # # -----------------------------------------------------------------------
+  # Download Table
+  # -----------------------------------------------------------------------
   output$downloadTable <- downloadHandler(
     filename = function(file) {
-      ifelse(input$tabs == "Histogram", paste0("hist_", outcome(),".csv"),
-             ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(),".csv"),
-                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(),".csv"),  
-                           paste0("mover_", outcome(),".csv"))))
+      
+      ifelse(input$tabs == "Histogram", paste0("hist_", outcome(), ".csv"),
+             ifelse(input$tabs == "Time Series",  paste0("ts_", outcome(), ".csv"),
+                    ifelse(input$tabs == "Cross Country",  paste0("cc_", outcome(), ".csv"),
+                           ifelse(input$tabs == "World Map",  paste0("map_", outcome(), ".csv"),
+                                  paste0("mover_", outcome(), ".csv")))))
     },
     content = function(file) {
       if(input$tabs == "Histogram") {
         write.csv(histd(), file, row.names=F)
-        showNotification(HTML("File download complete ✓ "), type = "message")
+        showNotification(HTML("Histogram file download complete ✓ "),
+                         type = "message")
         
       } else if (input$tabs == "Time Series") {
         write.csv(tsd(), file, row.names=F)
-        showNotification(HTML("File download complete ✓ "), type = "message")
+        showNotification(HTML("Time series file download complete ✓ "),
+                         type = "message")
         
       } else if (input$tabs == "Cross Country") {
         write.csv(ccd(), file, row.names=F)
-        showNotification(HTML("File download complete ✓ "), type = "message")
+        showNotification(HTML("Cross country file download complete ✓ "),
+                         type = "message")
+        
+      } else if (input$tabs == "World Map") {
+        write.csv(mapd(), file, row.names=F)
+        showNotification(HTML("Map file download complete ✓ "),
+                         type = "message")
         
       } else {
         write.csv(moverd(), file, row.names=F)
-        showNotification(HTML("File download complete ✓ "), type = "message")
+        showNotification(HTML("Break down file download complete ✓ "),
+                         type = "message")
+        
       }
     }
   )
