@@ -8,11 +8,11 @@ suppressPackageStartupMessages({
   library(shinyWidgets)
   library(bslib)
   library(Hmisc)
+  library(survey)
 })
 
-# # -----------------------------------------------------------------------
 lapop_fonts()
-
+# # -----------------------------------------------------------------------
 dstrata <- readRDS("gm_shiny_data_en.rds")
 labs <- readRDS("labs_en.rds")
 vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
@@ -26,7 +26,6 @@ waves_total = c("2004", "2006", "2008", "2010", "2012", "2014",
 
 # helper for cleaning ts - handle missing values at end or middle of series
 # # -----------------------------------------------------------------------
-
 omit_na_edges <- function(df) {
   # Find which rows have NA values
   na_rows <- apply(df, 1, function(row) any(is.na(row)))
@@ -41,50 +40,65 @@ omit_na_edges <- function(df) {
   return(df_clean)
 }
 
-# custom weighted averages and CIs, to speed up computational speed vs. survey_mean
+# custom weighted averages and CIs that takes design into consideration
 # # -----------------------------------------------------------------------
-
-weighted.ttest.ci <- function(x, weights) {
+lpr_ci <- function(data,
+                     outcome,      # binary variable (0/1)
+                     weight = "weight1500",         # weight variable (e.g., "weight1500")
+                     strata = NULL,  # strata variable (optional)
+                     psu = NULL,     # PSU/cluster variable (optional)
+                     conf.level = 0.95,
+                     na.rm = TRUE) {
   
-  strata <- get("strata", envir = parent.frame())
+  require(survey)
   
-  # Remove NAs
-  valid <- !is.na(x) & !is.na(weights) & !is.na(strata)
-  x       <- x[valid]
-  weights <- weights[valid]
-  strata  <- strata[valid]
+  # Remove missing values if requested
+  vars_needed <- c(outcome, weight, strata, psu)
+  vars_needed <- vars_needed[!is.null(vars_needed)]
   
-  nx <- length(x)
+  if (na.rm) {
+    data <- data[complete.cases(data[, vars_needed]), ]
+  }
   
-  # Overall weighted mean
-  mx <- weighted.mean(x, weights, na.rm = TRUE)
+  # Define survey design
+  if (!is.null(strata) && !is.null(psu)) {
+    
+    options(survey.lonely.psu = "adjust") # FOR SINGLE PSU COUNTRIES
+    
+    design <- svydesign(
+      ids     = as.formula(paste0("~", psu)),
+      strata  = as.formula(paste0("~", strata)),
+      weights = as.formula(paste0("~", weight)),
+      data    = data,
+      nest    = TRUE
+    )
+    
+  } else {
+    
+    # Weighted but no complex design
+    design <- svydesign(
+      ids     = ~1,
+      weights = as.formula(paste0("~", weight)),
+      data    = data
+    )
+  }
   
-  # Stratified variance
-  strata_list <- unique(strata)
+  # Estimate proportion
+  formula_outcome <- as.formula(paste0("~", outcome))
   
-  strat_var <- sapply(strata_list, function(s) {
-    idx   <- strata == s
-    x_s   <- x[idx]
-    w_s   <- weights[idx]
-    n_s   <- length(x_s)
-    W_s   <- sum(w_s) / sum(weights)
-    var_s <- Hmisc::wtd.var(x_s, w_s, normwt = TRUE, na.rm = TRUE)
-    return(W_s^2 * var_s / n_s)
-  })
+  est <- svymean(formula_outcome, design)
   
-  vx     <- sum(strat_var)
-  stderr <- sqrt(vx)
+  ci  <- confint(est, level = conf.level)
   
-  df    <- nx - length(strata_list)
-  tstat <- mx / stderr
-  cint  <- qt(1 - 0.05/2, df)
-  cint  <- tstat + c(-cint, cint)
-  confint <- cint * stderr
+  result <- data.frame(
+    prop = coef(est)[1],
+    lb   = ci[1],
+    ub   = ci[2],
+    se   = SE(est)[1]
+  )
   
-  result <- data.frame(prop = mx, lb = confint[1], ub = confint[2])
   return(result)
 }
-
 
 # helper function for mover
 # # -----------------------------------------------------------------------
@@ -102,7 +116,14 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
       TRUE ~ 0
     )) %>%
     group_by(vallabel = haven::as_factor(zap_missing(!!sym(group_var)))) %>%
-    summarise_at(vars("outcome_rec"), list(~weighted.ttest.ci(., !!sym(weight_var)))) %>%
+    summarise(
+      outcome_rec = list(
+        lpr_ci(
+          data = cur_data(),
+          outcome = "outcome_rec",
+          weight = "weight1500",
+          strata = "strata",
+          psu = "upm"))) %>%
     unnest_wider(col = "outcome_rec") %>%
     mutate(
       varlabel = var_label,
@@ -207,8 +228,6 @@ ui <- fluidPage(
       
       # This makes slider input only integers
       tags$style(type = "text/css", ".irs-grid-pol.small {height: 0px;}"),
-      
-      
       
       pickerInput(inputId = "wave", 
                   label = "Survey Rounds",
@@ -561,6 +580,7 @@ server <- function(input, output, session) {
   # Time-series
   # # -----------------------------------------------------------------------
   tsd <- reactive({
+    
     dta_ts = Error(
       dff() %>%
         drop_na(outcome()) %>%
@@ -570,16 +590,27 @@ server <- function(input, output, session) {
             !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(as.character(as_factor(wave))) %>%
-        summarise_at(vars("outcome_rec"),
-                     list(~weighted.ttest.ci(., weight1500))) %>%
+        summarise(outcome_rec = list(
+          lpr_ci(
+              data = cur_data(),
+              outcome = "outcome_rec",
+              weight = "weight1500",
+              strata = "strata",
+              psu = "upm"))) %>%
         unnest_wider(col = "outcome_rec") %>%
         mutate(proplabel = paste0(round(prop), "%")) %>%
         rename(.,  wave = 1) %>%
         filter(prop != 0) 
     )
+    
     validate(
       need(dta_ts, "Error: no data available. Please verify that this question was asked in this country/year combination")
     )
+    
+    validate(
+      need(sum(!is.na(dta_ts$prop)) >= 2, "Please select at least TWO survey rounds with available data to display a time series.")
+      )
+    
     dta_ts = merge(dta_ts, data.frame(wave = as.character(waves_total), empty = 1), by = "wave", all.y = TRUE)
     return(omit_na_edges(dta_ts))
   })
@@ -610,8 +641,13 @@ server <- function(input, output, session) {
             !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(vallabel = pais_lab) %>%
-        summarise_at(vars("outcome_rec"),
-                     list(~weighted.ttest.ci(., weight1500))) %>%
+        summarise(outcome_rec = list(
+            lpr_ci(
+              data = cur_data(),
+              outcome = "outcome_rec",
+              weight = "weight1500",
+              strata = "strata",
+              psu = "upm"))) %>%
         unnest_wider(col = "outcome_rec") %>%
         filter(prop != 0) %>%
         mutate(proplabel = paste0(round(prop), "%"))
@@ -770,7 +806,7 @@ server <- function(input, output, session) {
     
     dta_map <- dff() %>%
       
-      # Create binary indicator (100 = within range, 0 = outside)
+      # Create binary outcome (100 = within range, 0 = outside)
       mutate(
         outcome_rec = ifelse(
           .data[[var_sel]] >= rec_min &

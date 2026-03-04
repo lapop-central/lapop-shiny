@@ -27,7 +27,6 @@ waves_total = c("2004", "2006", "2008", "2010", "2012", "2014",
 
 # helper function for cleaning ts -- handle missing values at end or middle of series
 # # -----------------------------------------------------------------------
-
 omit_na_edges <- function(df) {
   # Find which rows have NA values
   na_rows <- apply(df, 1, function(row) any(is.na(row)))
@@ -42,21 +41,65 @@ omit_na_edges <- function(df) {
   return(df_clean)
 }
 
-# Custom helper weighted averages and CIs, to speed up computational speed vs. survey_mean
+# custom weighted averages and CIs that takes design into consideration
 # # -----------------------------------------------------------------------
-
-weighted.ttest.ci <- function(x, weights) {
-  nx <- length(x)
-  vx <- Hmisc::wtd.var(x, weights, normwt = TRUE, na.rm = TRUE) ## From Hmisc
-  mx <- weighted.mean(x, weights, na.rm = TRUE)
-  stderr <- sqrt(vx/nx)
-  tstat <- mx/stderr ## not mx - mu
-  cint <- qt(1 - 0.05/2, nx - 1)
-  cint <- tstat + c(-cint, cint)
-  confint = cint * stderr
-  result = data.frame(prop = mx, lb = confint[1], ub = confint[2])
+lpr_ci <- function(data,
+                   outcome,      # binary variable (0/1)
+                   weight = "weight1500",         # weight variable (e.g., "weight1500")
+                   strata = NULL,  # strata variable (optional)
+                   psu = NULL,     # PSU/cluster variable (optional)
+                   conf.level = 0.95,
+                   na.rm = TRUE) {
+  
+  require(survey)
+  
+  # Remove missing values if requested
+  vars_needed <- c(outcome, weight, strata, psu)
+  vars_needed <- vars_needed[!is.null(vars_needed)]
+  
+  if (na.rm) {
+    data <- data[complete.cases(data[, vars_needed]), ]
+  }
+  
+  # Define survey design
+  if (!is.null(strata) && !is.null(psu)) {
+    
+    options(survey.lonely.psu = "adjust") # FOR SINGLE PSU COUNTRIES
+    
+    design <- svydesign(
+      ids     = as.formula(paste0("~", psu)),
+      strata  = as.formula(paste0("~", strata)),
+      weights = as.formula(paste0("~", weight)),
+      data    = data,
+      nest    = TRUE
+    )
+    
+  } else {
+    
+    # Weighted but no complex design
+    design <- svydesign(
+      ids     = ~1,
+      weights = as.formula(paste0("~", weight)),
+      data    = data
+    )
+  }
+  
+  # Estimate proportion
+  formula_outcome <- as.formula(paste0("~", outcome))
+  
+  est <- svymean(formula_outcome, design)
+  
+  ci  <- confint(est, level = conf.level)
+  
+  result <- data.frame(
+    prop = coef(est)[1],
+    lb   = ci[1],
+    ub   = ci[2],
+    se   = SE(est)[1]
+  )
+  
   return(result)
-} 
+}
 
 # helper function for mover
 # # -----------------------------------------------------------------------
@@ -74,7 +117,14 @@ process_data <- function(data, outcome_var, recode_range, group_var, var_label, 
       TRUE ~ 0
     )) %>%
     group_by(vallabel = haven::as_factor(zap_missing(!!sym(group_var)))) %>%
-    summarise_at(vars("outcome_rec"), list(~weighted.ttest.ci(., !!sym(weight_var)))) %>%
+    summarise(
+      outcome_rec = list(
+        lpr_ci(
+          data = cur_data(),
+          outcome = "outcome_rec",
+          weight = "weight1500",
+          strata = "strata",
+          psu = "upm"))) %>%
     unnest_wider(col = "outcome_rec") %>%
     mutate(
       varlabel = var_label,
@@ -546,16 +596,28 @@ server <- function(input, output, session) {
             !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(as.character(as_factor(wave))) %>%
-        summarise_at(vars("outcome_rec"),
-                     list(~weighted.ttest.ci(., weight1500))) %>%
+        summarise(
+          outcome_rec = list(
+            lpr_ci(
+              data = cur_data(),
+              outcome = "outcome_rec",
+              weight = "weight1500",
+              strata = "strata",
+              psu = "upm"))) %>%
         unnest_wider(col = "outcome_rec") %>%
         mutate(proplabel = paste0(round(prop), "%")) %>%
         rename(.,  wave = 1) %>%
         filter(prop != 0) 
     )
+    
     validate(
       need(dta_ts, "Error: no hay datos disponibles. Verifique que esta pregunta se haya realizado en esta combinación de país/año.")
     )
+    
+    validate(
+      need(sum(!is.na(dta_ts$prop)) >= 2, "Seleccione al menos DOS rondas de encuesta con datos disponibles para mostrar una serie temporal.")
+    )
+    
     dta_ts = merge(dta_ts, data.frame(wave = as.character(waves_total), empty = 1), by = "wave", all.y = TRUE)
     return(omit_na_edges(dta_ts))
   })
@@ -586,8 +648,14 @@ server <- function(input, output, session) {
             !!sym(outcome()) <= input$recode[2] ~ 100,
           TRUE ~ 0)) %>%
         group_by(vallabel = pais_lab) %>%
-        summarise_at(vars("outcome_rec"),
-                     list(~weighted.ttest.ci(., weight1500))) %>%
+        summarise(
+          outcome_rec = list(
+            lpr_ci(
+              data = cur_data(),
+              outcome = "outcome_rec",
+              weight = "weight1500",
+              strata = "strata",
+              psu = "upm"))) %>%
         unnest_wider(col = "outcome_rec") %>%
         filter(prop != 0) %>%
         mutate(proplabel = paste0(round(prop), "%"))

@@ -5,8 +5,8 @@ rm(list=ls())
 
 # If creating Spanish version, set to true
 # # -----------------------------------------------------------------------
-esp <- TRUE
-#esp <- FALSE
+#esp <- TRUE
+esp <- FALSE
 
 # Read in RAW grand merge (gm) data created from Stata do file
 # # -----------------------------------------------------------------------
