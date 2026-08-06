@@ -1,2 +1,2 @@
-# Spanish Translation of AmericasBarometer Data Playground
-### Authors: Luke Plutowski and Robert Vidigal
+# 2004-2026 AmericasBarometer Data Playground
+### Author: Robert Vidigal, PhD
