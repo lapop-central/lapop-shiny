@@ -21,9 +21,9 @@ vars_labels <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
 dstrata$year[dstrata$year==2025]<-2026
 
 # Fix 2025-2026 wave (there is two types of codes for wave in the GM)
-dstrata_2026_wave <- dstrata %>%
-  filter(year == 2026, wave == 11) %>%
-  mutate(wave = 2026); dstrata <- bind_rows(dstrata,  dstrata_2026_wave)
+#dstrata_2026_wave <- dstrata %>%
+#  filter(year == 2026, wave == 11) %>%
+#  mutate(wave = 2026); dstrata <- bind_rows(dstrata,  dstrata_2026_wave)
 
 # Error function
 Error<-function(x){
@@ -205,7 +205,7 @@ ui <- fluidPage(
                   selected = c("Argentina", "Bolivia", "Brazil", "Chile",
                                "Colombia", "Costa Rica", "Dominican Republic",
                                "Ecuador", "El Salvador", "Guatemala", "Haiti",
-                               "Honduras", "Jamaica", "Mexico", "Nicaragua", 
+                               "Honduras", "Mexico", "Nicaragua", #"Jamaica",
                                "Panama", "Paraguay", "Peru", "Uruguay"),
                   options = list(`actions-box` = TRUE),
                   multiple = TRUE), 
