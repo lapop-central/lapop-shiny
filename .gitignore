@@ -16,3 +16,4 @@ rsconnect/shinyapps.io/centerforglobaldemocracy/lapop-shiny.dcf
 .Rhistory
 app_old_warning.R
 lapop-shiny.Rproj
+*.dta
