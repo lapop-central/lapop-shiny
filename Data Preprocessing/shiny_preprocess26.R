@@ -1,14 +1,14 @@
+rm(list = ls())
+
 # Load packages
 library(dplyr)
 library(haven)
 library(srvyr)
 
-rm(list = ls())
-
 # -----------------------------------------------------------------------
 # Paths
 # -----------------------------------------------------------------------
-path <- "C:/Users/vidigar/Box/Rob LAPOP/data/"
+path <- "C:/Users/vidigar/Documents/GitHub/lapop-shiny/"
 
 pais_lab <- read.csv("Data Preprocessing/pais_lab.csv")
 vars_labels_base <- read.csv("variable_labels_shiny.csv", encoding = "latin1")
@@ -23,7 +23,7 @@ make_shiny_data <- function(esp = FALSE) {
   message("Creating ", ifelse(esp, "Spanish", "English"), " version...")
   
   # Read in RAW grand merge data created from Stata do-file
-  gm <- haven::read_dta(paste0(path, "gm_", lang, "_2004_2026.dta"))
+  gm <- haven::read_dta(paste0(path, "Data Preprocessing/gm_", lang, "_2004_2026.dta"))
   
   pais_lab_use <- pais_lab
   
@@ -39,7 +39,7 @@ make_shiny_data <- function(esp = FALSE) {
   # -----------------------------------------------------------------------
   # GENDER
   # -----------------------------------------------------------------------
-  gm$genderm <- gm$sex
+  gm$genderm <- gm$gender
   gm$genderm <- ifelse(is.na(gm$genderm) & gm$q1tc_r < 3, gm$q1tc_r, gm$genderm)
   gm$genderm <- ifelse(is.na(gm$genderm) & gm$q1tb < 3, gm$q1tb, gm$genderm)
   gm$genderm <- ifelse(is.na(gm$genderm) & gm$usq1tc < 3, gm$usq1tc, gm$genderm)
@@ -64,58 +64,58 @@ make_shiny_data <- function(esp = FALSE) {
   gm$edrer <- ifelse(is.na(gm$edrer), gm$edr, gm$edrer)
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) &
+    gm$year < 2021 & is.na(gm$edrer) &
       gm$pais %in% c(1, 2, 3, 4, 6, 7, 9, 10, 12, 13, 14, 15, 26, 28),
-    cut(gm$ed, breaks = c(-1, 0, 6, 12, 20), labels = c("0", "1", "2", "3")),
+    cut(gm$edrer, breaks = c(-1, 0, 6, 12, 20), labels = c("0", "1", "2", "3")),
     NA
   )
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) & is.na(gm$edrr) &
+    gm$year < 2021 & is.na(gm$edrer) & is.na(gm$edrr) &
       gm$pais %in% c(5, 16, 11, 23, 24),
-    cut(gm$ed, breaks = c(-1, 0, 6, 11, 20), labels = c("0", "1", "2", "3")),
+    cut(gm$edrer, breaks = c(-1, 0, 6, 11, 20), labels = c("0", "1", "2", "3")),
     gm$edrr
   )
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) & is.na(gm$edrr) &
+    gm$year < 2021 & is.na(gm$edrer) & is.na(gm$edrr) &
       gm$pais %in% c(17, 30),
-    cut(gm$ed, breaks = c(-1, 0, 7, 12, 20), labels = c("0", "1", "2", "3")),
+    cut(gm$edrer, breaks = c(-1, 0, 7, 12, 20), labels = c("0", "1", "2", "3")),
     gm$edrr
   )
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 8,
-    cut(gm$ed, breaks = c(-1, 0, 5, 11, 20), labels = c("0", "1", "2", "3")),
+    gm$year < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 8,
+    cut(gm$edrer, breaks = c(-1, 0, 5, 11, 20), labels = c("0", "1", "2", "3")),
     gm$edrr
   )
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 21,
-    cut(gm$ed, breaks = c(-1, 0, 8, 12, 20), labels = c("0", "1", "2", "3")),
+    gm$year < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 21,
+    cut(gm$edrer, breaks = c(-1, 0, 8, 12, 20), labels = c("0", "1", "2", "3")),
     gm$edrr
   )
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 22,
-    cut(gm$ed, breaks = c(-1, 0, 7, 14, 20), labels = c("0", "1", "2", "3")),
+    gm$year < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 22,
+    cut(gm$edrer, breaks = c(-1, 0, 7, 14, 20), labels = c("0", "1", "2", "3")),
     gm$edrr
   )
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 25,
-    cut(gm$ed, breaks = c(-1, 0, 5, 12, 20), labels = c("0", "1", "2", "3")),
+    gm$year < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 25,
+    cut(gm$edrer, breaks = c(-1, 0, 5, 12, 20), labels = c("0", "1", "2", "3")),
     gm$edrr
   )
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 27,
-    cut(gm$ed, breaks = c(-1, 0, 6, 13, 20), labels = c("0", "1", "2", "3")),
+    gm$year < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 27,
+    cut(gm$edrer, breaks = c(-1, 0, 6, 13, 20), labels = c("0", "1", "2", "3")),
     gm$edrr
   )
   
   gm$edrr <- ifelse(
-    gm$wave < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 40,
+    gm$year < 2021 & is.na(gm$edrer) & is.na(gm$edrr) & gm$pais == 40,
     cut(gm$ed_usa, breaks = c(-1, 0, 1, 2, 20), labels = c("0", "1", "2", "3")),
     gm$edrr
   )
@@ -162,7 +162,7 @@ make_shiny_data <- function(esp = FALSE) {
   # -----------------------------------------------------------------------
   # IDEOLOGY
   # -----------------------------------------------------------------------
-  gm$l1 <- ifelse(is.na(gm$l1), gm$ideology, gm$l1)
+  #gm$l1 <- ifelse(is.na(gm$l1), gm$ideology, gm$l1)
   gm$l1 <- ifelse(is.na(gm$l1), gm$l1n, gm$l1)
   gm$l1 <- ifelse(is.na(gm$l1), gm$l1bn, gm$l1)
   gm$l1 <- ifelse(is.na(gm$l1), gm$l1b, gm$l1)
@@ -200,6 +200,7 @@ make_shiny_data <- function(esp = FALSE) {
     "strata",
     "upm",
     "wave",
+    "year",
     "pais_nam",
     "pais_lab",
     "weight1500"
@@ -287,5 +288,8 @@ make_shiny_data <- function(esp = FALSE) {
 # -----------------------------------------------------------------------
 # Run both languages in one call
 # -----------------------------------------------------------------------
+# ENGLISH DATA
 make_shiny_data(esp = FALSE)
+
+# SPANISH DATA
 make_shiny_data(esp = TRUE)

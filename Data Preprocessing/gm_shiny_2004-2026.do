@@ -4,54 +4,32 @@ set more off
 * -----------------------------
 * User settings
 * -----------------------------
-local data_dir "C:\Users\vidigar\Box\Rob LAPOP\data"
+local data_dir26 "C:\Users\vidigar\Box\LAPOP Shared\2_Projects\2025-26 AB\Core_Regional\Data Processing\GM drafts"
+local out_dir "C:\Users\vidigar\Documents\GitHub\lapop-shiny\Data Preprocessing"
 
-local gm_2004_2023 "`data_dir'\Grand Merge 2004-2023 LAPOP AmericasBarometer (v1.1s).dta"
-local gm_2025_2026 "`data_dir'\GM ALLVARS 2025-26 (v0.7.4).dta"
-
-tempfile gm_2025_common
+local gm_2004_2026 "`data_dir26'\Grand Merge 2004-2026 AmericasBarometer ALLVARS (v1.0i).dta"
 
 * -----------------------------
-* Keep all 2004-2023 variables.
-* From 2025-26, keep only variables already present in 2004-2023.
-* -----------------------------
-use "`gm_2004_2023'", clear
-ds
-local oldvars `r(varlist)'
-
-use "`gm_2025_2026'", clear
-ds
-local newvars `r(varlist)'
-
-local commonvars
-local new_only_vars
-
-foreach v of local newvars {
-    if strpos(" `oldvars' ", " `v' ") {
-        local commonvars `commonvars' `v'
-    }
-    else {
-        local new_only_vars `new_only_vars' `v'
-    }
-}
-
-display as text "Variables from 2025-26 also found in 2004-2023:"
-display as result wordcount("`commonvars'")
-
-display as text "Variables in 2025-26 not added because absent from 2004-2023:"
-display as result wordcount("`new_only_vars'")
-
-keep `commonvars'
-save `gm_2025_common', replace
-
-* -----------------------------
-* Create both language versions
+* Create both language versions from the 2026 GM only.
+* The 2026 GM already contains all 2004-2026 variables/observations.
 * -----------------------------
 foreach lang in en es {
 
-    use "`gm_2004_2023'", clear
+    use "`gm_2004_2026'", clear
 
-    append using `gm_2025_common', force
+    capture confirm variable wave
+    if _rc {
+        display as error "ERROR: wave variable not found in 2026 GM source."
+        error 459
+    }
+
+    count if wave == 11
+    display as text "2026 observations in source for `lang': " r(N)
+
+    if r(N) == 0 {
+        display as error "ERROR: No wave == 2026 observations found in 2026 GM source."
+        error 459
+    }
 
     capture label language `lang'
 
@@ -216,5 +194,5 @@ foreach lang in en es {
     * -----------------------------
     * Save output
     * -----------------------------
-    save "`data_dir'\gm_`lang'_2004_2026.dta", replace
+    save "`out_dir'\gm_`lang'_2004_2026.dta", replace
 }
